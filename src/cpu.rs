@@ -103,6 +103,21 @@ impl Cpu {
                         LoadWordSource::Value(_) => self.pc.wrapping_add(3),
                     }
                 }
+                LoadType::COffset(source) => {
+                    let address = 0xFF00 + self.registers.c as u16;
+                    match source {
+                        LoadCOffsetSource::C => {
+                            self.registers.a = self.bus.read_byte(address);
+                            eprintln!("  A = *({:#4x}) = {:#2x}", address, self.registers.a);
+                        }
+                        LoadCOffsetSource::A => {
+                            self.bus.write_byte(address, self.registers.a);
+                            eprintln!("  *({:#4x}) = A = {:#2x}", address, self.registers.a);
+                        }
+                    };
+
+                    self.pc.wrapping_add(1)
+                }
             },
             Instruction::Add(target) => match target {
                 // FIXME: abstract this like the others

@@ -24,6 +24,7 @@ pub enum LoadType {
     ByteDec(LoadByteDecTarget),
     Byte(LoadByteTarget, LoadByteSource),
     Word(LoadWordTarget, LoadWordSource),
+    COffset(LoadCOffsetSource),
 }
 
 #[derive(Debug)]
@@ -52,6 +53,12 @@ pub enum LoadWordTarget {
 #[derive(Debug)]
 pub enum LoadWordSource {
     Value(u16),
+}
+
+#[derive(Debug)]
+pub enum LoadCOffsetSource {
+    C,
+    A,
 }
 
 #[derive(Debug)]

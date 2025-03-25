@@ -33,6 +33,8 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 )),
             )
         }
+        0xF2 => (i, Instruction::Ld(LoadType::COffset(LoadCOffsetSource::C))),
+        0xE2 => (i, Instruction::Ld(LoadType::COffset(LoadCOffsetSource::A))),
         // 16-Bit Loads
         0x21 => {
             let (i, source) = le_u16().parse(i)?;
