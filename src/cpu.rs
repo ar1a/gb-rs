@@ -1,20 +1,8 @@
 #![allow(dead_code)]
-mod registers;
 use registers::*;
 
-pub enum Instruction {
-    Add(ArithmeticTarget),
-}
-
-pub enum ArithmeticTarget {
-    A,
-    B,
-    C,
-    D,
-    E,
-    H,
-    L,
-}
+pub mod instruction;
+pub mod registers;
 
 #[derive(Debug, Default)]
 struct Cpu {
@@ -22,10 +10,10 @@ struct Cpu {
 }
 
 impl Cpu {
-    fn execute(&mut self, instruction: Instruction) {
+    fn execute(&mut self, instruction: instruction::Instruction) {
         match instruction {
-            Instruction::Add(target) => match target {
-                ArithmeticTarget::C => {
+            instruction::Instruction::Add(target) => match target {
+                instruction::ArithmeticTarget::C => {
                     let value = self.registers.c;
                     let new_value = self.add(value);
                     self.registers.a = new_value;
@@ -59,11 +47,15 @@ mod test {
         cpu.registers.a = u8::MAX - 1;
         cpu.registers.c = 1;
 
-        cpu.execute(Instruction::Add(ArithmeticTarget::C));
+        cpu.execute(instruction::Instruction::Add(
+            instruction::ArithmeticTarget::C,
+        ));
         assert_eq!(cpu.registers.a, 255);
         assert!(!cpu.registers.f.contains(Flags::Carry));
 
-        cpu.execute(Instruction::Add(ArithmeticTarget::C));
+        cpu.execute(instruction::Instruction::Add(
+            instruction::ArithmeticTarget::C,
+        ));
         assert_eq!(cpu.registers.a, 0);
         assert!(cpu.registers.f.contains(Flags::Carry));
     }
