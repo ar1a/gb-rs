@@ -22,13 +22,13 @@ impl Cpu {
         let (_, instruction) = parse_instruction(slice).unwrap();
         if slice[0] == 0xcb {
             eprintln!(
-                "read opcode {:#4x} at {:#x}",
+                "read opcode {:#4x} at {:#4x}",
                 // big endian so the opcode is printed in the order its read
                 u16::from_be_bytes(slice[0..2].try_into().unwrap()),
                 self.pc
             );
         } else {
-            eprintln!("read opcode {:#x} at {:#x}", slice[0], self.pc);
+            eprintln!("read opcode {:#x} at {:#4x}", slice[0], self.pc);
         }
         let next_pc = self.execute(instruction);
 
@@ -139,6 +139,20 @@ impl Cpu {
                 );
                 self.pc.wrapping_add(2)
             }
+            Instruction::JR(condition, relative) => {
+                let should_jump = match condition {
+                    JumpTest::NotZero => !self.registers.f.contains(Flags::Zero),
+                    JumpTest::Zero => self.registers.f.contains(Flags::Zero),
+                    JumpTest::NotCarry => !self.registers.f.contains(Flags::Carry),
+                    JumpTest::Carry => self.registers.f.contains(Flags::Carry),
+                    JumpTest::Always => true,
+                };
+                eprintln!(
+                    "  relative jump of {} if {:?} (will jump: {})",
+                    relative, condition, should_jump
+                );
+                self.relative_jump(should_jump, relative)
+            }
             _ => todo!("unimplemented instruction: {:?}", instruction),
         }
     }
@@ -170,6 +184,15 @@ impl Cpu {
         flags.set(Flags::Zero, value & mask == 0);
         flags.remove(Flags::Subtraction);
         flags.insert(Flags::HalfCarry);
+    }
+
+    fn relative_jump(&mut self, should_jump: bool, offset: i8) -> u16 {
+        let pc = self.pc.wrapping_add(2);
+        if should_jump {
+            pc.wrapping_add_signed(offset as i16)
+        } else {
+            pc
+        }
     }
 }
 

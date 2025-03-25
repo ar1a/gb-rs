@@ -1,5 +1,9 @@
 use instruction::*;
-use nom::{IResult, Parser, bytes::complete::take, number::le_u16};
+use nom::{
+    IResult, Parser,
+    bytes::complete::take,
+    number::{le_i8, le_u16},
+};
 
 pub mod instruction;
 
@@ -50,6 +54,12 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 0x7c => (i, Instruction::Bit(1 << 7, BitSource::H)),
                 _ => todo!("Haven't implemented prefixed {:#x} {byte:#x}", 0xCB),
             }
+        }
+
+        // Jumps
+        0x20 => {
+            let (i, address) = le_i8().parse(i)?;
+            (i, Instruction::JR(JumpTest::NotZero, address))
         }
         _ => todo!("Haven't implemented {byte:#x}"),
     })

@@ -5,6 +5,7 @@ pub enum Instruction {
     Add(ArithmeticTarget),
     Xor(XorSource),
     Bit(u8, BitSource),
+    JR(JumpTest, i8),
 }
 
 #[derive(Debug)]
@@ -65,4 +66,13 @@ pub enum BitSource {
     H,
     L,
     HL,
+}
+
+#[derive(Debug)]
+pub enum JumpTest {
+    NotZero,
+    Zero,
+    NotCarry,
+    Carry,
+    Always,
 }
