@@ -43,6 +43,14 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
         // Cp
         // Inc
         // Dec
+        0xCB => {
+            let (i, byte) = take(1usize).parse(i)?;
+            let byte = byte[0];
+            match byte {
+                0x7c => (i, Instruction::Bit(1 << 7, BitSource::H)),
+                _ => todo!("Haven't implemented prefixed {:#x} {byte:#x}", 0xCB),
+            }
+        }
         _ => todo!("Haven't implemented {byte:#x}"),
     })
 }

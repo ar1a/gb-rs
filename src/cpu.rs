@@ -20,7 +20,16 @@ impl Cpu {
     fn step(&mut self) {
         let slice = self.bus.slice_from(self.pc);
         let (_, instruction) = parse_instruction(slice).unwrap();
-        eprintln!("read opcode {:#x} at {:#x}", slice[0], self.pc);
+        if slice[0] == 0xcb {
+            eprintln!(
+                "read opcode {:#4x} at {:#x}",
+                // big endian so the opcode is printed in the order its read
+                u16::from_be_bytes(slice[0..2].try_into().unwrap()),
+                self.pc
+            );
+        } else {
+            eprintln!("read opcode {:#x} at {:#x}", slice[0], self.pc);
+        }
         let next_pc = self.execute(instruction);
 
         self.pc = next_pc;
@@ -109,6 +118,27 @@ impl Cpu {
             // Cp
             // Inc
             // Dec
+            Instruction::Bit(mask, source) => {
+                let value = match source {
+                    BitSource::A => self.registers.a,
+                    BitSource::B => self.registers.b,
+                    BitSource::C => self.registers.c,
+                    BitSource::D => self.registers.d,
+                    BitSource::E => self.registers.e,
+                    BitSource::H => self.registers.h,
+                    BitSource::L => self.registers.l,
+                    BitSource::HL => self.bus.read_byte(self.registers.hl()),
+                };
+                self.bit(mask, value);
+                eprintln!(
+                    "  {:?} {:#x} & {:#8b} = {}",
+                    source,
+                    value,
+                    mask,
+                    self.registers.f.contains(Flags::Zero)
+                );
+                self.pc.wrapping_add(2)
+            }
             _ => todo!("unimplemented instruction: {:?}", instruction),
         }
     }
@@ -133,6 +163,13 @@ impl Cpu {
         flags.set(Flags::Zero, new_value == 0);
         flags.remove(make_bitflags!(Flags::{Subtraction | Carry | HalfCarry}));
         new_value
+    }
+
+    fn bit(&mut self, mask: u8, value: u8) {
+        let flags = &mut self.registers.f;
+        flags.set(Flags::Zero, value & mask == 0);
+        flags.remove(Flags::Subtraction);
+        flags.insert(Flags::HalfCarry);
     }
 }
 

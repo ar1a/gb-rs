@@ -4,6 +4,7 @@ pub enum Instruction {
     Ld(LoadType),
     Add(ArithmeticTarget),
     Xor(XorSource),
+    Bit(u8, BitSource),
 }
 
 #[derive(Debug)]
@@ -52,4 +53,16 @@ pub enum XorSource {
     L,
     HL,
     Value(u8),
+}
+
+#[derive(Debug)]
+pub enum BitSource {
+    A,
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
+    HL,
 }
