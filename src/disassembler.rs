@@ -23,6 +23,16 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
             )
         }
         0x32 => (i, Instruction::Ld(LoadType::ByteDec(LoadByteDecTarget::HL))),
+        0x3E => {
+            let (i, source) = le_u8().parse(i)?;
+            (
+                i,
+                Instruction::Ld(LoadType::Byte(
+                    LoadByteTarget::A,
+                    LoadByteSource::Value(source),
+                )),
+            )
+        }
         // 16-Bit Loads
         0x21 => {
             let (i, source) = le_u16().parse(i)?;
