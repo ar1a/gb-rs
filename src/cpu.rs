@@ -132,7 +132,7 @@ impl Cpu {
                 };
                 self.bit(mask, value);
                 eprintln!(
-                    "  {:?} {:#2x} ({:#8b}) & {:#8b} = {}",
+                    "  {:?} {:#2x} (0b{:0>8b}) & 0b{:0>8b} = {}",
                     source,
                     value,
                     value,
