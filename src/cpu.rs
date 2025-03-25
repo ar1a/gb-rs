@@ -2,11 +2,11 @@
 mod registers;
 use registers::*;
 
-enum Instruction {
+pub enum Instruction {
     Add(ArithmeticTarget),
 }
 
-enum ArithmeticTarget {
+pub enum ArithmeticTarget {
     A,
     B,
     C,
