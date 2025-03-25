@@ -18,6 +18,7 @@ struct Cpu {
 
 impl Cpu {
     fn step(&mut self) {
+        eprintln!();
         let slice = self.bus.slice_from(self.pc);
         let (_, instruction) = parse_instruction(slice).unwrap();
         if slice[0] == 0xcb {
