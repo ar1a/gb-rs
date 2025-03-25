@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+use enumflags2::make_bitflags;
 use registers::*;
 
 use crate::disassembler::{instruction::*, parse_instruction};
@@ -49,6 +50,7 @@ impl Cpu {
                 }
             },
             Instruction::Add(target) => match target {
+                // FIXME: abstract this like the others
                 ArithmeticTarget::C => {
                     let value = self.registers.c;
                     let new_value = self.add(value);
@@ -57,6 +59,32 @@ impl Cpu {
                 }
                 _ => todo!("unimplemented target: {:?}", target),
             },
+            // Adc
+            // Sub
+            // Sbc
+            // And
+            // Or
+            Instruction::Xor(source) => {
+                let value = match source {
+                    XorSource::A => self.registers.a,
+                    XorSource::B => self.registers.b,
+                    XorSource::C => self.registers.c,
+                    XorSource::D => self.registers.d,
+                    XorSource::E => self.registers.e,
+                    XorSource::L => self.registers.l,
+                    XorSource::HL => self.bus.read_byte(self.registers.hl()),
+                    XorSource::Value(x) => x,
+                };
+                self.registers.a = self.xor(value);
+                eprintln!("  A ^= {:?} = {:#x}", source, self.registers.a);
+                match source {
+                    XorSource::Value(_) => self.pc.wrapping_add(2),
+                    _ => self.pc.wrapping_add(1),
+                }
+            }
+            // Cp
+            // Inc
+            // Dec
             _ => todo!("unimplemented instruction: {:?}", instruction),
         }
     }
@@ -72,6 +100,14 @@ impl Cpu {
             Flags::HalfCarry,
             (self.registers.a & 0b1111) + (value & 0b1111) > 0b1111,
         );
+        new_value
+    }
+
+    fn xor(&mut self, value: u8) -> u8 {
+        let new_value = self.registers.a ^ value;
+        let flags = &mut self.registers.f;
+        flags.set(Flags::Zero, new_value == 0);
+        flags.remove(make_bitflags!(Flags::{Subtraction | Carry | HalfCarry}));
         new_value
     }
 }

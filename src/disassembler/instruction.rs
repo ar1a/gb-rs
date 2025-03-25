@@ -1,8 +1,9 @@
 #![allow(dead_code)]
 #[derive(Debug)]
 pub enum Instruction {
-    Add(ArithmeticTarget),
     Ld(LoadType),
+    Add(ArithmeticTarget),
+    Xor(XorSource),
 }
 
 #[derive(Debug)]
@@ -32,4 +33,16 @@ pub enum LoadWordTarget {
 #[derive(Debug)]
 pub enum LoadWordSource {
     Value(u16),
+}
+
+#[derive(Debug)]
+pub enum XorSource {
+    A,
+    B,
+    C,
+    D,
+    E,
+    L,
+    HL,
+    Value(u8),
 }

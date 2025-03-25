@@ -20,8 +20,18 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
             )
         }
         // 8-Bit ALU
+        // Add
         0x81 => (i, Instruction::Add(ArithmeticTarget::C)),
-
+        // Adc
+        // Sub
+        // Sbc
+        // And
+        // Or
+        // Xor
+        0xAF => (i, Instruction::Xor(XorSource::A)),
+        // Cp
+        // Inc
+        // Dec
         _ => todo!("Haven't implemented {byte:#x}"),
     })
 }
