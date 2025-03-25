@@ -1,9 +1,8 @@
 #![allow(dead_code)]
 use registers::*;
 
-use crate::disassembler::parse_instruction;
+use crate::disassembler::{instruction::*, parse_instruction};
 
-pub mod instruction;
 pub mod memorybus;
 pub mod registers;
 
@@ -12,33 +11,53 @@ struct Cpu {
     registers: Registers,
     /// The Program Counter register
     pc: u16,
+    sp: u16,
     bus: memorybus::MemoryBus,
 }
 
 impl Cpu {
     fn step(&mut self) {
-        let (_, instruction) =
-            dbg!(parse_instruction(&self.bus.memory[self.pc as usize..]).unwrap());
-        eprintln!(
-            "read opcode {:#x} at {:#x}",
-            self.bus.memory[self.pc as usize], self.pc
-        );
+        let slice = self.bus.slice_from(self.pc);
+        let (_, instruction) = parse_instruction(slice).unwrap();
+        eprintln!("read opcode {:#x} at {:#x}", slice[0], self.pc);
         let next_pc = self.execute(instruction);
 
         self.pc = next_pc;
     }
 
-    fn execute(&mut self, instruction: instruction::Instruction) -> u16 {
+    fn execute(&mut self, instruction: Instruction) -> u16 {
+        #![allow(unreachable_patterns)]
+        #![allow(clippy::infallible_destructuring_match)]
         match instruction {
-            instruction::Instruction::Add(target) => match target {
-                instruction::ArithmeticTarget::C => {
+            Instruction::Ld(load_type) => match load_type {
+                LoadType::Word(target, source) => {
+                    let source_value = match source {
+                        LoadWordSource::Value(x) => x,
+                    };
+                    match target {
+                        LoadWordTarget::SP => self.sp = source_value,
+                        LoadWordTarget::BC => self.registers.set_bc(source_value),
+                        LoadWordTarget::DE => self.registers.set_de(source_value),
+                        LoadWordTarget::HL => {
+                            self.bus.write_word(self.registers.hl(), source_value);
+                        }
+                    };
+                    eprintln!("  {:?} = {:#4x}", target, source_value);
+                    match source {
+                        LoadWordSource::Value(_) => self.pc.wrapping_add(3),
+                    }
+                }
+            },
+            Instruction::Add(target) => match target {
+                ArithmeticTarget::C => {
                     let value = self.registers.c;
                     let new_value = self.add(value);
                     self.registers.a = new_value;
                     self.pc.wrapping_add(1)
                 }
-                _ => todo!("support more targets"),
+                _ => todo!("unimplemented target: {:?}", target),
             },
+            _ => todo!("unimplemented instruction: {:?}", instruction),
         }
     }
 
@@ -66,15 +85,11 @@ mod test {
         cpu.registers.a = u8::MAX - 1;
         cpu.registers.c = 1;
 
-        cpu.execute(instruction::Instruction::Add(
-            instruction::ArithmeticTarget::C,
-        ));
+        cpu.execute(Instruction::Add(ArithmeticTarget::C));
         assert_eq!(cpu.registers.a, 255);
         assert!(!cpu.registers.f.contains(Flags::Carry));
 
-        cpu.execute(instruction::Instruction::Add(
-            instruction::ArithmeticTarget::C,
-        ));
+        cpu.execute(Instruction::Add(ArithmeticTarget::C));
         assert_eq!(cpu.registers.a, 0);
         assert!(cpu.registers.f.contains(Flags::Carry));
     }
@@ -83,7 +98,7 @@ mod test {
     fn test_boot_rom() {
         let boot_rom = include_bytes!("../dmg_boot.bin");
         let mut cpu = Cpu::default();
-        cpu.bus.memory[0..256].copy_from_slice(boot_rom);
+        cpu.bus.slice_mut()[0..256].copy_from_slice(boot_rom);
         loop {
             cpu.step();
         }
