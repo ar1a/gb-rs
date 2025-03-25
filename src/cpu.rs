@@ -1,3 +1,5 @@
+use enumflags2::{BitFlag as _, BitFlags, bitflags};
+
 /// Base registers
 #[derive(Debug, Default)]
 struct Registers {
@@ -6,9 +8,20 @@ struct Registers {
     c: u8,
     d: u8,
     e: u8,
-    f: u8,
     h: u8,
     l: u8,
+
+    f: BitFlags<Flags>,
+}
+
+#[bitflags]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Flags {
+    Zero = 0b1000_0000,
+    Subtraction = 0b0100_0000,
+    HalfCarry = 0b0010_0000,
+    Carry = 0b0001_0000,
 }
 
 impl Registers {
@@ -21,13 +34,13 @@ impl Registers {
         self.c = c;
     }
 
-    const fn af(&self) -> u16 {
-        u16::from_le_bytes([self.a, self.f])
+    fn af(&self) -> u16 {
+        u16::from_le_bytes([self.a, self.f.bits()])
     }
-    const fn set_af(&mut self, value: u16) {
+    fn set_af(&mut self, value: u16) {
         let [a, f] = value.to_le_bytes();
         self.a = a;
-        self.f = f;
+        self.f = Flags::from_bits(f).unwrap();
     }
 
     const fn de(&self) -> u16 {
