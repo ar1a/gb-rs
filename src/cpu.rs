@@ -67,6 +67,27 @@ impl Cpu {
                     eprintln!("  HL = {:#4x}", self.registers.hl());
                     self.pc.wrapping_add(1)
                 }
+                LoadType::Byte(target, source) => {
+                    let source_value = match source {
+                        LoadByteSource::Value(x) => x,
+                    };
+                    match target {
+                        LoadByteTarget::A => self.registers.a = source_value,
+                        LoadByteTarget::B => self.registers.b = source_value,
+                        LoadByteTarget::C => self.registers.c = source_value,
+                        LoadByteTarget::D => self.registers.d = source_value,
+                        LoadByteTarget::H => self.registers.h = source_value,
+                        LoadByteTarget::L => self.registers.l = source_value,
+                        LoadByteTarget::HL => {
+                            self.bus.write_byte(self.registers.hl(), source_value)
+                        }
+                    }
+                    eprintln!("  {:?} = {:#2x}", target, source_value);
+                    match source {
+                        LoadByteSource::Value(_) => self.pc.wrapping_add(2),
+                        _ => self.pc.wrapping_add(1),
+                    }
+                }
                 LoadType::Word(target, source) => {
                     let source_value = match source {
                         LoadWordSource::Value(x) => x,

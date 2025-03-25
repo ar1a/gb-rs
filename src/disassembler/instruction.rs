@@ -22,9 +22,25 @@ pub enum ArithmeticTarget {
 #[derive(Debug)]
 pub enum LoadType {
     ByteDec(LoadByteDecTarget),
+    Byte(LoadByteTarget, LoadByteSource),
     Word(LoadWordTarget, LoadWordSource),
 }
 
+#[derive(Debug)]
+pub enum LoadByteTarget {
+    A,
+    B,
+    C,
+    D,
+    H,
+    L,
+    HL,
+}
+
+#[derive(Debug)]
+pub enum LoadByteSource {
+    Value(u8),
+}
 #[derive(Debug)]
 pub enum LoadWordTarget {
     BC,

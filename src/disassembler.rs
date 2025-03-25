@@ -2,7 +2,7 @@ use instruction::*;
 use nom::{
     IResult, Parser,
     bytes::complete::take,
-    number::{le_i8, le_u16},
+    number::{le_i8, le_u8, le_u16},
 };
 
 pub mod instruction;
@@ -12,6 +12,16 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
     let byte = byte[0];
     Ok(match byte {
         // 8-Bit Loads
+        0xE => {
+            let (i, source) = le_u8().parse(i)?;
+            (
+                i,
+                Instruction::Ld(LoadType::Byte(
+                    LoadByteTarget::C,
+                    LoadByteSource::Value(source),
+                )),
+            )
+        }
         0x32 => (i, Instruction::Ld(LoadType::ByteDec(LoadByteDecTarget::HL))),
         // 16-Bit Loads
         0x21 => {
