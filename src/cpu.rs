@@ -31,6 +31,32 @@ impl Cpu {
         #![allow(clippy::infallible_destructuring_match)]
         match instruction {
             Instruction::Ld(load_type) => match load_type {
+                LoadType::ByteDec(target) => {
+                    match target {
+                        LoadByteDecTarget::A => {
+                            self.registers.a = self.bus.read_byte(self.registers.hl());
+                            eprintln!(
+                                "  {:?} = *({:#4x}) = {:#x}",
+                                target,
+                                self.registers.hl(),
+                                self.registers.a
+                            );
+                        }
+                        LoadByteDecTarget::HL => {
+                            self.bus.write_byte(self.registers.hl(), self.registers.a);
+                            eprintln!(
+                                "  *({:?}) = {:#x} ({:?} is {:#4x})",
+                                target,
+                                self.registers.a,
+                                target,
+                                self.registers.hl(),
+                            );
+                        }
+                    };
+                    self.registers.set_hl(self.registers.hl() - 1);
+                    eprintln!("  HL = {:#4x}", self.registers.hl());
+                    self.pc.wrapping_add(1)
+                }
                 LoadType::Word(target, source) => {
                     let source_value = match source {
                         LoadWordSource::Value(x) => x,
