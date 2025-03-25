@@ -132,11 +132,12 @@ impl Cpu {
                 };
                 self.bit(mask, value);
                 eprintln!(
-                    "  {:?} {:#x} & {:#8b} = {}",
+                    "  {:?} {:#2x} ({:#8b}) & {:#8b} = {}",
                     source,
                     value,
+                    value,
                     mask,
-                    self.registers.f.contains(Flags::Zero)
+                    !self.registers.f.contains(Flags::Zero)
                 );
                 self.pc.wrapping_add(2)
             }
