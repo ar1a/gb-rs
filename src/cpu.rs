@@ -1,22 +1,41 @@
 #![allow(dead_code)]
 use registers::*;
 
+use crate::disassembler::parse_instruction;
+
 pub mod instruction;
+pub mod memorybus;
 pub mod registers;
 
 #[derive(Debug, Default)]
 struct Cpu {
     registers: Registers,
+    /// The Program Counter register
+    pc: u16,
+    bus: memorybus::MemoryBus,
 }
 
 impl Cpu {
-    fn execute(&mut self, instruction: instruction::Instruction) {
+    fn step(&mut self) {
+        let (_, instruction) =
+            dbg!(parse_instruction(&self.bus.memory[self.pc as usize..]).unwrap());
+        eprintln!(
+            "read opcode {:#x} at {:#x}",
+            self.bus.memory[self.pc as usize], self.pc
+        );
+        let next_pc = self.execute(instruction);
+
+        self.pc = next_pc;
+    }
+
+    fn execute(&mut self, instruction: instruction::Instruction) -> u16 {
         match instruction {
             instruction::Instruction::Add(target) => match target {
                 instruction::ArithmeticTarget::C => {
                     let value = self.registers.c;
                     let new_value = self.add(value);
                     self.registers.a = new_value;
+                    self.pc.wrapping_add(1)
                 }
                 _ => todo!("support more targets"),
             },
@@ -58,5 +77,15 @@ mod test {
         ));
         assert_eq!(cpu.registers.a, 0);
         assert!(cpu.registers.f.contains(Flags::Carry));
+    }
+
+    #[test]
+    fn test_boot_rom() {
+        let boot_rom = include_bytes!("../dmg_boot.bin");
+        let mut cpu = Cpu::default();
+        cpu.bus.memory[0..256].copy_from_slice(boot_rom);
+        loop {
+            cpu.step();
+        }
     }
 }
