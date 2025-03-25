@@ -39,9 +39,7 @@ impl Cpu {
                         LoadWordTarget::SP => self.sp = source_value,
                         LoadWordTarget::BC => self.registers.set_bc(source_value),
                         LoadWordTarget::DE => self.registers.set_de(source_value),
-                        LoadWordTarget::HL => {
-                            self.bus.write_word(self.registers.hl(), source_value);
-                        }
+                        LoadWordTarget::HL => self.registers.set_hl(source_value),
                     };
                     eprintln!("  {:?} = {:#4x}", target, source_value);
                     match source {

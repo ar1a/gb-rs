@@ -9,6 +9,16 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
     Ok(match byte {
         // 8-Bit Loads
         // 16-Bit Loads
+        0x21 => {
+            let (i, source) = le_u16().parse(i)?;
+            (
+                i,
+                Instruction::Ld(LoadType::Word(
+                    LoadWordTarget::HL,
+                    LoadWordSource::Value(source),
+                )),
+            )
+        }
         0x31 => {
             let (i, target) = le_u16().parse(i)?;
             (
