@@ -81,6 +81,7 @@ enum ArithmeticTarget {
     L,
 }
 
+#[derive(Debug, Default)]
 struct Cpu {
     registers: Registers,
 }
@@ -111,5 +112,24 @@ impl Cpu {
             (self.registers.a & 0b1111) + (value & 0b1111) > 0b1111,
         );
         new_value
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test_add() {
+        let mut cpu = Cpu::default();
+        cpu.registers.a = u8::MAX - 1;
+        cpu.registers.c = 1;
+
+        cpu.execute(Instruction::Add(ArithmeticTarget::C));
+        assert_eq!(cpu.registers.a, 255);
+        assert!(!cpu.registers.f.contains(Flags::Carry));
+
+        cpu.execute(Instruction::Add(ArithmeticTarget::C));
+        assert_eq!(cpu.registers.a, 0);
+        assert!(cpu.registers.f.contains(Flags::Carry));
     }
 }
