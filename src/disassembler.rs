@@ -132,6 +132,14 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 }
                 _ => nyi(),
             },
+            1 => match q {
+                0 => {
+                    let reg = RegisterPairsAF::from_u8(p).unwrap();
+                    (i, Instruction::Pop(reg))
+                }
+                1 => nyi(),
+                _ => unreachable!("{}", unreachable),
+            },
             2 => match y {
                 4 | 6 => {
                     let direction = match y {

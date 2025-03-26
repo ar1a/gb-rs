@@ -195,8 +195,19 @@ impl Cpu {
                     RegisterPairsAF::HL => self.registers.hl(),
                     RegisterPairsAF::AF => self.registers.af(),
                 };
-                eprintln!("  PUSH {:?} ({:#02x})", register, value);
+                eprintln!("  PUSH {:?} ({:#04x})", register, value);
                 self.push(value);
+                self.pc.wrapping_add(1)
+            }
+            Instruction::Pop(register) => {
+                let value = self.pop();
+                eprintln!("  POP {:?} {:#04x}", register, value);
+                match register {
+                    RegisterPairsAF::BC => self.registers.set_bc(value),
+                    RegisterPairsAF::DE => self.registers.set_de(value),
+                    RegisterPairsAF::HL => self.registers.set_hl(value),
+                    RegisterPairsAF::AF => self.registers.set_af(value),
+                }
                 self.pc.wrapping_add(1)
             }
             Instruction::Rot(rot, register) => match rot {
