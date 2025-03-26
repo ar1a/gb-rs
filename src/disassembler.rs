@@ -30,6 +30,14 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
 
     Ok(match x {
         0 => match z {
+            0 => match y {
+                4..7 => {
+                    let condition = JumpTest::from_u8(y - 4).unwrap();
+                    let (i, relative) = le_i8().parse(i)?;
+                    (i, Instruction::JR(condition, relative))
+                }
+                _ => nyi(),
+            },
             1 => match q {
                 0 => {
                     let (i, target) = le_u16().parse(i)?;
