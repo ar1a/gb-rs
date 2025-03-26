@@ -1,4 +1,6 @@
 #![allow(dead_code)]
+use num_derive::FromPrimitive;
+
 #[derive(Debug)]
 pub enum Instruction {
     Ld(LoadType),
@@ -23,7 +25,7 @@ pub enum ArithmeticTarget {
 pub enum LoadType {
     ByteDec(LoadByteDecTarget),
     Byte(LoadByteTarget, LoadByteSource),
-    Word(LoadWordTarget, LoadWordSource),
+    Word(RegisterPairsSP, LoadWordSource),
     COffset(LoadCOffsetSource),
 }
 
@@ -42,17 +44,10 @@ pub enum LoadByteTarget {
 pub enum LoadByteSource {
     Value(u8),
 }
-#[derive(Debug)]
-pub enum LoadWordTarget {
-    BC,
-    DE,
-    HL,
-    SP,
-}
 
 #[derive(Debug)]
 pub enum LoadWordSource {
-    Value(u16),
+    Immediate(u16),
 }
 
 #[derive(Debug)]
@@ -98,4 +93,55 @@ pub enum JumpTest {
     NotCarry,
     Carry,
     Always,
+}
+
+#[derive(Debug, FromPrimitive)]
+pub enum Registers8Bit {
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
+    HLIndirect,
+    A,
+}
+
+#[derive(Debug, FromPrimitive)]
+pub enum RegisterPairsSP {
+    BC,
+    DE,
+    HL,
+    SP,
+}
+#[derive(Debug, FromPrimitive)]
+pub enum RegisterPairsAF {
+    BC,
+    DE,
+    HL,
+    AF,
+}
+
+#[derive(Debug, FromPrimitive)]
+pub enum Alu {
+    Add,
+    Adc,
+    Sub,
+    Sbc,
+    And,
+    Xor,
+    Or,
+    Cp,
+}
+
+#[derive(Debug, FromPrimitive)]
+pub enum Rot {
+    Rlc,
+    Rrc,
+    Rl,
+    Rr,
+    Sla,
+    Sra,
+    Swap,
+    Srl,
 }

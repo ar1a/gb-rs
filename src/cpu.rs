@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use enumflags2::make_bitflags;
+use memorybus::*;
 use registers::*;
 
 use crate::disassembler::{instruction::*, parse_instruction};
@@ -13,7 +14,7 @@ struct Cpu {
     /// The Program Counter register
     pc: u16,
     sp: u16,
-    bus: memorybus::MemoryBus,
+    bus: MemoryBus,
 }
 
 impl Cpu {
@@ -111,17 +112,17 @@ impl Cpu {
                 }
                 LoadType::Word(target, source) => {
                     let source_value = match source {
-                        LoadWordSource::Value(x) => x,
+                        LoadWordSource::Immediate(x) => x,
                     };
                     match target {
-                        LoadWordTarget::SP => self.sp = source_value,
-                        LoadWordTarget::BC => self.registers.set_bc(source_value),
-                        LoadWordTarget::DE => self.registers.set_de(source_value),
-                        LoadWordTarget::HL => self.registers.set_hl(source_value),
+                        RegisterPairsSP::SP => self.sp = source_value,
+                        RegisterPairsSP::BC => self.registers.set_bc(source_value),
+                        RegisterPairsSP::DE => self.registers.set_de(source_value),
+                        RegisterPairsSP::HL => self.registers.set_hl(source_value),
                     };
                     eprintln!("  {:?} = {:#4x}", target, source_value);
                     match source {
-                        LoadWordSource::Value(_) => self.pc.wrapping_add(3),
+                        LoadWordSource::Immediate(_) => self.pc.wrapping_add(3),
                     }
                 }
                 LoadType::COffset(source) => {
