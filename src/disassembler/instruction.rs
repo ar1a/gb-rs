@@ -35,14 +35,14 @@ pub enum LoadType {
 pub enum RegisterOrImmediate {
     #[display("{0}")]
     Register(Register),
-    #[display("{0:02x}")]
+    #[display("{0:02X}")]
     Immediate(u8),
 }
 
 #[derive(Debug, Clone, Copy, Display)]
 pub enum COrImmediate {
     C,
-    #[display("{0:02x}")]
+    #[display("{0:02X}")]
     Immediate(u8),
 }
 

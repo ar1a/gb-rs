@@ -68,11 +68,11 @@ impl Cpu {
     }
 
     fn print_debug(&self, opcode: &str, context: &str) {
-        eprint!("{:04x}", self.pc);
+        eprint!("{:04X}", self.pc);
         let bytes: String = self
             .debug_bytes_consumed
             .iter()
-            .map(|byte| format!("{:02x} ", byte))
+            .map(|byte| format!("{:02X} ", byte))
             .collect::<Vec<_>>()
             .join("");
         eprint!(" {:12}", bytes);
@@ -97,7 +97,7 @@ impl Cpu {
                             let value = self.bus.read_byte(address);
                             self.print_debug(
                                 &format!("LD A, ({:?})", indirect_type),
-                                &format!("{} = {:04x}, A' = {:02x}", indirect_type, address, value),
+                                &format!("{} = {:04X}, A' = {:02X}", indirect_type, address, value),
                             );
                             self.registers.a = value;
                         }
@@ -105,7 +105,7 @@ impl Cpu {
                             let value = self.registers.a;
                             self.print_debug(
                                 &format!("LD ({:?}), A", indirect_type),
-                                &format!("{} = {:04x}, A = {:02x}", indirect_type, address, value),
+                                &format!("{} = {:04X}, A = {:02X}", indirect_type, address, value),
                             );
                             self.bus.write_byte(address, value)
                         }
@@ -126,7 +126,7 @@ impl Cpu {
                         RegisterOrImmediate::Immediate(x) => x,
                         RegisterOrImmediate::Register(reg) => {
                             let value = self.match_register(reg);
-                            self.debug_context.push(format!("{} = {:02x}", reg, value));
+                            self.debug_context.push(format!("{} = {:02X}", reg, value));
                             value
                         }
                     };
@@ -145,7 +145,7 @@ impl Cpu {
                         LoadWordSource::Immediate(x) => x,
                     };
                     self.write_register16(register, source_value);
-                    self.print_debug(&format!("LD {}, {:02x}", register, source_value), "");
+                    self.print_debug(&format!("LD {}, {:02X}", register, source_value), "");
                     match source {
                         LoadWordSource::Immediate(_) => self.pc.wrapping_add(3),
                     }
@@ -154,7 +154,7 @@ impl Cpu {
                     let offset = match source {
                         COrImmediate::C => {
                             self.debug_context
-                                .push(format!("C = {:02x}", self.registers.c));
+                                .push(format!("C = {:02X}", self.registers.c));
                             self.registers.c
                         }
                         COrImmediate::Immediate(x) => x,
@@ -164,7 +164,7 @@ impl Cpu {
                     match direction {
                         Direction::FromA => {
                             self.debug_context
-                                .push(format!("A = {:02x}", self.registers.a));
+                                .push(format!("A = {:02X}", self.registers.a));
                             self.print_debug(
                                 &format!("LDH ({}), A", source),
                                 &self.format_context(),
@@ -174,7 +174,7 @@ impl Cpu {
                         Direction::IntoA => {
                             let value = self.bus.read_byte(address);
                             self.debug_context
-                                .push(format!("({:04x}) = {:02x}", address, value));
+                                .push(format!("({:04X}) = {:02X}", address, value));
                             self.print_debug(
                                 &format!("LDH A, ({})", source),
                                 &self.format_context(),
@@ -196,14 +196,14 @@ impl Cpu {
                             let value = self.match_register(register);
                             if !matches!(register, Register::A) {
                                 self.debug_context
-                                    .push(format!("{} = {:02x}", register, value));
+                                    .push(format!("{} = {:02X}", register, value));
                             }
                             value
                         }
                         RegisterOrImmediate::Immediate(value) => value,
                     };
                     self.debug_context
-                        .push(format!("A = {:02x}", self.registers.a));
+                        .push(format!("A = {:02X}", self.registers.a));
                     self.registers.a = self.xor(value);
                     self.print_debug(&format!("XOR {}", source), &self.format_context());
                     match source {
@@ -433,7 +433,7 @@ impl Cpu {
 
     fn xor(&mut self, value: u8) -> u8 {
         let new_value = self.registers.a ^ value;
-        self.debug_context.push(format!("A' = {:02x}", new_value));
+        self.debug_context.push(format!("A' = {:02X}", new_value));
         let flags = &mut self.registers.f;
         let zero = new_value == 0;
         flags.set(Flags::Zero, zero);
