@@ -31,9 +31,11 @@ pub enum LoadType {
     LastByteAddress(COrImmediate, Direction),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Display)]
 pub enum RegisterOrImmediate {
+    #[display("{0}")]
     Register(Register),
+    #[display("{0:02x}")]
     Immediate(u8),
 }
 
@@ -96,7 +98,7 @@ pub enum JumpTest {
     Always,
 }
 
-#[derive(Debug, FromPrimitive, Clone, Copy)]
+#[derive(Debug, FromPrimitive, Clone, Copy, Display)]
 pub enum Register {
     B,
     C,
@@ -104,6 +106,7 @@ pub enum Register {
     E,
     H,
     L,
+    #[display("(HL)")]
     HLIndirect,
     A,
 }

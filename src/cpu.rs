@@ -16,11 +16,13 @@ struct Cpu {
     sp: u16,
     bus: MemoryBus,
     debug_bytes_consumed: Vec<u8>,
+    // Optionally used
+    debug_context: Vec<String>,
 }
 
 impl Cpu {
     fn step(&mut self) {
-        eprintln!();
+        self.debug_context.clear();
         let slice = self.bus.slice_from(self.pc);
         let (after, instruction) = parse_instruction(slice).unwrap();
         let bytes_consumed_len = slice.len() - after.len();
@@ -54,6 +56,15 @@ impl Cpu {
             self.registers.de(),
             self.registers.hl()
         )
+    }
+
+    fn format_context(&self) -> String {
+        self.debug_context
+            .iter()
+            .filter(|s| !s.is_empty())
+            .cloned()
+            .collect::<Vec<_>>()
+            .join(", ")
     }
 
     fn print_debug(&self, opcode: &str, context: &str) {
@@ -113,10 +124,17 @@ impl Cpu {
                 LoadType::Byte(register, source) => {
                     let value = match source {
                         RegisterOrImmediate::Immediate(x) => x,
-                        RegisterOrImmediate::Register(reg) => self.match_register(reg),
+                        RegisterOrImmediate::Register(reg) => {
+                            let value = self.match_register(reg);
+                            self.debug_context.push(format!("{} = {:02x}", reg, value));
+                            value
+                        }
                     };
+                    self.print_debug(
+                        &format!("LD {}, {}", register, source),
+                        &self.format_context(),
+                    );
                     self.write_register(register, value);
-                    eprintln!("  {:?} = {:#2x}", register, value);
                     match source {
                         RegisterOrImmediate::Immediate(_) => self.pc.wrapping_add(2),
                         _ => self.pc.wrapping_add(1),
