@@ -15,12 +15,18 @@ pub enum LoadType {
     Indirect(LoadIndirect, Direction),
     Byte(Register, RegisterOrImmediate),
     Word(RegisterPairsSP, LoadWordSource),
-    COffset(Direction),
+    LastByteAddress(COrImmediate, Direction),
 }
 
 #[derive(Debug)]
 pub enum RegisterOrImmediate {
     Register(Register),
+    Immediate(u8),
+}
+
+#[derive(Debug)]
+pub enum COrImmediate {
+    C,
     Immediate(u8),
 }
 

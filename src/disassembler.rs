@@ -107,6 +107,24 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
             )
         }
         3 => match z {
+            0 => match y {
+                4 | 6 => {
+                    let (i, value) = le_u8().parse(i)?;
+                    let direction = match y {
+                        4 => Direction::FromA,
+                        6 => Direction::IntoA,
+                        _ => unreachable!(),
+                    };
+                    (
+                        i,
+                        Instruction::Ld(LoadType::LastByteAddress(
+                            COrImmediate::Immediate(value),
+                            direction,
+                        )),
+                    )
+                }
+                _ => nyi(),
+            },
             2 => match y {
                 4 | 6 => {
                     let direction = match y {
@@ -115,7 +133,10 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                         _ => unreachable!(),
                     };
 
-                    (i, Instruction::Ld(LoadType::COffset(direction)))
+                    (
+                        i,
+                        Instruction::Ld(LoadType::LastByteAddress(COrImmediate::C, direction)),
+                    )
                 }
                 _ => nyi(),
             },

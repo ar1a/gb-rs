@@ -113,8 +113,12 @@ impl Cpu {
                         LoadWordSource::Immediate(_) => self.pc.wrapping_add(3),
                     }
                 }
-                LoadType::COffset(direction) => {
-                    let address = 0xFF00 + self.registers.c as u16;
+                LoadType::LastByteAddress(source, direction) => {
+                    let offset = match source {
+                        COrImmediate::C => self.registers.c,
+                        COrImmediate::Immediate(x) => x,
+                    };
+                    let address = 0xFF00 + offset as u16;
 
                     match direction {
                         Direction::FromA => {
@@ -127,7 +131,10 @@ impl Cpu {
                         }
                     };
 
-                    self.pc.wrapping_add(1)
+                    match source {
+                        COrImmediate::Immediate(_) => self.pc.wrapping_add(2),
+                        _ => self.pc.wrapping_add(1),
+                    }
                 }
             },
             Instruction::Arithmetic(alu, source) => match alu {
