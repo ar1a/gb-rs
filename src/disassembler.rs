@@ -145,7 +145,10 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 _ => nyi(),
             },
             5 => match q {
-                0 => nyi(),
+                0 => {
+                    let reg = RegisterPairsAF::from_u8(p).unwrap();
+                    (i, Instruction::Push(reg))
+                }
                 1 => match p {
                     0 => {
                         let (i, address) = le_u16().parse(i)?;

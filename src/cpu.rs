@@ -188,6 +188,17 @@ impl Cpu {
                 );
                 self.call(should_jump, address)
             }
+            Instruction::Push(register) => {
+                let value = match register {
+                    RegisterPairsAF::BC => self.registers.bc(),
+                    RegisterPairsAF::DE => self.registers.de(),
+                    RegisterPairsAF::HL => self.registers.hl(),
+                    RegisterPairsAF::AF => self.registers.af(),
+                };
+                eprintln!("  PUSH {:?} ({:#02x})", register, value);
+                self.push(value);
+                self.pc.wrapping_add(1)
+            }
             _ => todo!("unimplemented instruction: {:?}", instruction),
         }
     }

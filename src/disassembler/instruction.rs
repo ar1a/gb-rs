@@ -9,6 +9,8 @@ pub enum Instruction {
     JR(JumpTest, i8),
     Inc(Register),
     Call(JumpTest, u16),
+    Push(RegisterPairsAF),
+    Pop(RegisterPairsAF),
 }
 
 #[derive(Debug)]
