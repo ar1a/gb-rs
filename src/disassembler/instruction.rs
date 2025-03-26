@@ -8,6 +8,7 @@ pub enum Instruction {
     Bit(u8, Register),
     JR(JumpTest, i8),
     Inc(Register),
+    Call(JumpTest, u16),
 }
 
 #[derive(Debug)]
@@ -71,7 +72,7 @@ pub enum LoadByteDecTarget {
     HL,
 }
 
-#[derive(Debug, FromPrimitive)]
+#[derive(Debug, FromPrimitive, Clone, Copy)]
 pub enum JumpTest {
     NotZero,
     Zero,
@@ -81,7 +82,7 @@ pub enum JumpTest {
     Always,
 }
 
-#[derive(Debug, FromPrimitive, Copy, Clone)]
+#[derive(Debug, FromPrimitive, Clone, Copy)]
 pub enum Register {
     B,
     C,

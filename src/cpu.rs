@@ -167,13 +167,7 @@ impl Cpu {
                 self.pc.wrapping_add(2)
             }
             Instruction::JR(condition, relative) => {
-                let should_jump = match condition {
-                    JumpTest::NotZero => !self.registers.f.contains(Flags::Zero),
-                    JumpTest::Zero => self.registers.f.contains(Flags::Zero),
-                    JumpTest::NotCarry => !self.registers.f.contains(Flags::Carry),
-                    JumpTest::Carry => self.registers.f.contains(Flags::Carry),
-                    JumpTest::Always => true,
-                };
+                let should_jump = self.match_jump_condition(condition);
                 eprintln!(
                     "  relative jump of {} if {:?} (will jump: {})",
                     relative, condition, should_jump
@@ -185,6 +179,14 @@ impl Cpu {
                 self.write_register(register, inc);
                 eprintln!("  INC {:?} = {:#02x}", register, inc);
                 self.pc.wrapping_add(1)
+            }
+            Instruction::Call(condition, address) => {
+                let should_jump = self.match_jump_condition(condition);
+                eprintln!(
+                    "  call to {:#04x} if {:?} (will jump: {})",
+                    address, condition, should_jump
+                );
+                self.call(should_jump, address)
             }
             _ => todo!("unimplemented instruction: {:?}", instruction),
         }
@@ -216,6 +218,16 @@ impl Cpu {
         }
     }
 
+    fn match_jump_condition(&self, condition: JumpTest) -> bool {
+        match condition {
+            JumpTest::NotZero => !self.registers.f.contains(Flags::Zero),
+            JumpTest::Zero => self.registers.f.contains(Flags::Zero),
+            JumpTest::NotCarry => !self.registers.f.contains(Flags::Carry),
+            JumpTest::Carry => self.registers.f.contains(Flags::Carry),
+            JumpTest::Always => true,
+        }
+    }
+
     fn push(&mut self, value: u16) {
         self.sp = self.sp.wrapping_sub(1);
         self.bus.write_byte(self.sp, ((value & 0xFF00) >> 8) as u8);
@@ -230,6 +242,24 @@ impl Cpu {
         let word = self.bus.read_word(self.sp);
         self.sp = self.sp.wrapping_add(2);
         word
+    }
+
+    fn call(&mut self, should_jump: bool, address: u16) -> u16 {
+        let next_pc = self.pc.wrapping_add(3);
+        if should_jump {
+            self.push(next_pc);
+            address
+        } else {
+            next_pc
+        }
+    }
+
+    fn retn(&mut self, should_jump: bool) -> u16 {
+        if should_jump {
+            self.pop()
+        } else {
+            self.pc.wrapping_add(1)
+        }
     }
 
     fn add(&mut self, value: u8) -> u8 {
@@ -288,8 +318,10 @@ mod test {
     #[test]
     fn test_boot_rom() {
         let boot_rom = include_bytes!("../dmg_boot.bin");
+        let test_rom = include_bytes!("../test_roms/cpu_instrs/individual/01-special.gb");
         let mut cpu = Cpu::default();
         cpu.bus.slice_mut()[0..256].copy_from_slice(boot_rom);
+        cpu.bus.slice_mut()[256..32768].copy_from_slice(&test_rom[256..]);
         loop {
             cpu.step();
         }

@@ -144,6 +144,17 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 1 => prefixed_instruction(i)?,
                 _ => nyi(),
             },
+            5 => match q {
+                0 => nyi(),
+                1 => match p {
+                    0 => {
+                        let (i, address) = le_u16().parse(i)?;
+                        (i, Instruction::Call(JumpTest::Always, address))
+                    }
+                    _ => panic!("non-existent instruction: {}", unreachable),
+                },
+                _ => unreachable!("{}", unreachable),
+            },
             _ => nyi(),
         },
         _ => unreachable!("{}", unreachable),

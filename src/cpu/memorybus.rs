@@ -4,8 +4,13 @@ pub const IO_BEGIN: usize = 0xFF00;
 pub const IO_END: usize = 0xFF7F;
 pub const IO_SIZE: usize = IO_END - IO_BEGIN + 1;
 
+pub const HRAM_BEGIN: usize = 0xFF80;
+pub const HRAM_END: usize = 0xFFFE;
+pub const HRAM_SIZE: usize = HRAM_END - HRAM_BEGIN + 1;
+
 #[derive(Debug)]
 pub(crate) struct MemoryBus {
+    // FIXME: separate into memory segments
     memory: [u8; 0xFFFF],
     gpu: Gpu,
 
@@ -31,6 +36,7 @@ impl MemoryBus {
             00..=0x3FFF => self.memory[address],
             VRAM_BEGIN..=VRAM_END => self.gpu.read_vram(address - VRAM_BEGIN),
             IO_BEGIN..=IO_END => self.io[address - IO_BEGIN],
+            HRAM_BEGIN..HRAM_END => self.memory[address],
             _ => todo!("memory region not mapped yet: {:#4x}", address),
         }
     }
@@ -40,18 +46,19 @@ impl MemoryBus {
             00..=0x3FFF => panic!("attempted to write to ROM"),
             VRAM_BEGIN..=VRAM_END => self.gpu.write_vram(address - VRAM_BEGIN, value),
             IO_BEGIN..=IO_END => self.io[address - IO_BEGIN] = value,
+            HRAM_BEGIN..HRAM_END => self.memory[address] = value,
             _ => todo!("memory region not mapped yet: {:#4x}", address),
         }
     }
 
     pub fn read_word(&self, address: u16) -> u16 {
-        let address = address as usize;
-        u16::from_le_bytes(self.memory[address..=address + 1].try_into().unwrap())
+        let bytes = [self.read_byte(address), self.read_byte(address + 1)];
+        u16::from_le_bytes(bytes)
     }
     pub fn write_word(&mut self, address: u16, value: u16) {
-        let address = address as usize;
         let bytes = u16::to_le_bytes(value);
-        self.memory[address..=address + 1].copy_from_slice(&bytes);
+        self.write_byte(address, bytes[0]);
+        self.write_byte(address + 1, bytes[1]);
     }
 
     pub fn slice_from(&self, pc: u16) -> &[u8] {
