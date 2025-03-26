@@ -99,7 +99,7 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 3 => (i, Instruction::Rra),
                 _ => nyi(),
             },
-            _ => nyi(),
+            _ => unreachable!("{}", unreachable),
         },
         1 => match z {
             1..6 | 7 => {
@@ -149,7 +149,10 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                     let reg = Register16Alt::from_u8(p).unwrap();
                     (i, Instruction::Pop(reg))
                 }
-                1 => nyi(),
+                1 => match p {
+                    0 => (i, Instruction::Ret),
+                    _ => nyi(),
+                },
                 _ => unreachable!("{}", unreachable),
             },
             2 => match y {

@@ -12,6 +12,7 @@ pub enum Instruction {
     Dec(Register),
     Dec16(Register16),
     Call(JumpTest, u16),
+    Ret,
     Push(Register16Alt),
     Pop(Register16Alt),
     Rot(Rot, Register),

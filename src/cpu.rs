@@ -176,7 +176,7 @@ impl Cpu {
                 self.pc.wrapping_add(1)
             }
             Instruction::Inc16(register) => {
-                let value = dbg!(self.match_register16(register)).wrapping_add(1);
+                let value = self.match_register16(register).wrapping_add(1);
                 self.write_register16(register, value);
                 eprintln!("  INC {:?}", register);
                 self.pc.wrapping_add(1)
@@ -200,6 +200,10 @@ impl Cpu {
                     address, condition, should_jump
                 );
                 self.call(should_jump, address)
+            }
+            Instruction::Ret => {
+                eprintln!("  RET to {:#04x}", self.bus.read_word(self.sp));
+                self.retn(true)
             }
             Instruction::Push(register) => {
                 let value = match register {
