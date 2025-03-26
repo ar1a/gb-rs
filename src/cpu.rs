@@ -192,11 +192,20 @@ impl Cpu {
             Instruction::Arithmetic(alu, source) => match alu {
                 Alu::Xor => {
                     let value = match source {
-                        RegisterOrImmediate::Register(register) => self.match_register(register),
+                        RegisterOrImmediate::Register(register) => {
+                            let value = self.match_register(register);
+                            if !matches!(register, Register::A) {
+                                self.debug_context
+                                    .push(format!("{} = {:02x}", register, value));
+                            }
+                            value
+                        }
                         RegisterOrImmediate::Immediate(value) => value,
                     };
+                    self.debug_context
+                        .push(format!("A = {:02x}", self.registers.a));
                     self.registers.a = self.xor(value);
-                    eprintln!("  A ^= {:?} = {:#x}", source, self.registers.a);
+                    self.print_debug(&format!("XOR {}", source), &self.format_context());
                     match source {
                         RegisterOrImmediate::Immediate(_) => self.pc.wrapping_add(2),
                         _ => self.pc.wrapping_add(1),
@@ -424,8 +433,11 @@ impl Cpu {
 
     fn xor(&mut self, value: u8) -> u8 {
         let new_value = self.registers.a ^ value;
+        self.debug_context.push(format!("A' = {:02x}", new_value));
         let flags = &mut self.registers.f;
-        flags.set(Flags::Zero, new_value == 0);
+        let zero = new_value == 0;
+        flags.set(Flags::Zero, zero);
+        self.debug_context.push(format!("Z = {}", zero as u8));
         flags.remove(make_bitflags!(Flags::{Subtraction | Carry | HalfCarry}));
         new_value
     }
