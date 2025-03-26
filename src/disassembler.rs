@@ -188,6 +188,14 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 },
                 _ => unreachable!("{}", unreachable),
             },
+            6 => {
+                let alu = Alu::from_u8(y).unwrap();
+                let (i, value) = le_u8().parse(i)?;
+                (
+                    i,
+                    Instruction::Arithmetic(alu, RegisterOrImmediate::Immediate(value)),
+                )
+            }
             _ => nyi(),
         },
         _ => unreachable!("{}", unreachable),

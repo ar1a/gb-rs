@@ -40,9 +40,9 @@ impl Cpu {
 
     fn format_state(&self) -> String {
         format!(
-            "A:{:02X} F:{} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}",
+            "A:{:02X} F:{:0>4b} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}\nAF:{:04x} BC:{:04x} DE:{:04x} HL:{:04x}",
             self.registers.a,
-            self.registers.f,
+            self.registers.f.bits() >> 4,
             self.registers.b,
             self.registers.c,
             self.registers.d,
@@ -55,6 +55,10 @@ impl Cpu {
             self.bus.read_byte(self.pc + 1),
             self.bus.read_byte(self.pc + 2),
             self.bus.read_byte(self.pc + 3),
+            self.registers.af(),
+            self.registers.bc(),
+            self.registers.de(),
+            self.registers.hl()
         )
     }
 
@@ -136,10 +140,26 @@ impl Cpu {
                 Alu::Xor => {
                     let value = match source {
                         RegisterOrImmediate::Register(register) => self.match_register(register),
-                        RegisterOrImmediate::Immediate(_value) => todo!(),
+                        RegisterOrImmediate::Immediate(value) => value,
                     };
                     self.registers.a = self.xor(value);
                     eprintln!("  A ^= {:?} = {:#x}", source, self.registers.a);
+                    match source {
+                        RegisterOrImmediate::Immediate(_) => self.pc.wrapping_add(2),
+                        _ => self.pc.wrapping_add(1),
+                    }
+                }
+                Alu::Cp => {
+                    let value = match source {
+                        RegisterOrImmediate::Register(register) => self.match_register(register),
+                        RegisterOrImmediate::Immediate(value) => value,
+                    };
+                    self.cp(value);
+                    eprintln!(
+                        "  CP {:?} {:#02x} - {:#02x} == {:?}",
+                        source, self.registers.a, value, self.registers.f
+                    );
+
                     match source {
                         RegisterOrImmediate::Immediate(_) => self.pc.wrapping_add(2),
                         _ => self.pc.wrapping_add(1),
@@ -355,6 +375,17 @@ impl Cpu {
         flags.set(Flags::Zero, new_value == 0);
         flags.remove(make_bitflags!(Flags::{Subtraction | Carry | HalfCarry}));
         new_value
+    }
+
+    fn cp(&mut self, value: u8) {
+        let flags = &mut self.registers.f;
+        flags.set(Flags::Zero, self.registers.a == value);
+        flags.insert(Flags::Subtraction);
+        flags.set(
+            Flags::HalfCarry,
+            (self.registers.a & 0b1111) < (value & 0b1111),
+        );
+        flags.set(Flags::Carry, self.registers.a < value);
     }
 
     fn bit(&mut self, mask: u8, value: u8) {
