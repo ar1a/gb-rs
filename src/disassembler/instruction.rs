@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use num_derive::FromPrimitive;
+use parse_display::Display;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Instruction {
@@ -53,11 +54,13 @@ pub enum LoadByteTarget {
     HL,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Display)]
 pub enum LoadIndirect {
     BC,
     DE,
+    #[display("HL")]
     HLDec,
+    #[display("HL")]
     HLInc,
 }
 

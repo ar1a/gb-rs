@@ -61,13 +61,17 @@ impl MemoryBus {
         self.write_byte(address + 1, bytes[1]);
     }
 
+    // FIXME: memory map
     pub fn slice_from(&self, pc: u16) -> &[u8] {
         &self.memory[pc as usize..]
     }
 
+    // FIXME: memory map
     pub fn slice(&self) -> &[u8] {
         &self.memory
     }
+
+    // FIXME: memory map
     pub fn slice_mut(&mut self) -> &mut [u8] {
         &mut self.memory
     }

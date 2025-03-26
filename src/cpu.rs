@@ -15,23 +15,17 @@ struct Cpu {
     pc: u16,
     sp: u16,
     bus: MemoryBus,
+    debug_bytes_consumed: Vec<u8>,
 }
 
 impl Cpu {
     fn step(&mut self) {
         eprintln!();
         let slice = self.bus.slice_from(self.pc);
-        let (_, instruction) = parse_instruction(slice).unwrap();
-        if slice[0] == 0xcb {
-            eprintln!(
-                "read opcode {:#4x} at {:#4x}",
-                // big endian so the opcode is printed in the order its read
-                u16::from_be_bytes(slice[0..2].try_into().unwrap()),
-                self.pc
-            );
-        } else {
-            eprintln!("read opcode {:#x} at {:#4x}", slice[0], self.pc);
-        }
+        let (after, instruction) = parse_instruction(slice).unwrap();
+        let bytes_consumed_len = slice.len() - after.len();
+        self.debug_bytes_consumed
+            .splice(.., slice[..bytes_consumed_len].iter().copied());
         let next_pc = self.execute(instruction);
         eprintln!("{}", self.format_state()); // TODO: Log to a file instead
 
@@ -62,6 +56,19 @@ impl Cpu {
         )
     }
 
+    fn print_debug(&self, opcode: &str, context: &str) {
+        eprint!("{:04x}", self.pc);
+        let bytes: String = self
+            .debug_bytes_consumed
+            .iter()
+            .map(|byte| format!("{:02x} ", byte))
+            .collect::<Vec<_>>()
+            .join("");
+        eprint!(" {:12}", bytes);
+        eprint!("{:32}", opcode);
+        eprintln!(" ; {}", context);
+    }
+
     fn execute(&mut self, instruction: Instruction) -> u16 {
         #![allow(unreachable_patterns)]
         #![allow(clippy::infallible_destructuring_match)]
@@ -75,8 +82,22 @@ impl Cpu {
                     };
 
                     match direction {
-                        Direction::IntoA => self.registers.a = self.bus.read_byte(address),
-                        Direction::FromA => self.bus.write_byte(address, self.registers.a),
+                        Direction::IntoA => {
+                            let value = self.bus.read_byte(address);
+                            self.print_debug(
+                                &format!("LD A, ({:?})", indirect_type),
+                                &format!("{} = {:04x}, A' = {:02x}", indirect_type, address, value),
+                            );
+                            self.registers.a = value;
+                        }
+                        Direction::FromA => {
+                            let value = self.registers.a;
+                            self.print_debug(
+                                &format!("LD ({:?}), A", indirect_type),
+                                &format!("{} = {:04x}, A = {:02x}", indirect_type, address, value),
+                            );
+                            self.bus.write_byte(address, value)
+                        }
                     };
 
                     let adjust = match indirect_type {
@@ -87,7 +108,6 @@ impl Cpu {
                     if adjust != 0 {
                         self.registers.set_hl(address.wrapping_add_signed(adjust));
                     }
-                    eprintln!("  LD Indirect {:#?} {:?}", indirect_type, direction);
                     self.pc.wrapping_add(1)
                 }
                 LoadType::Byte(register, source) => {
