@@ -113,16 +113,17 @@ impl Cpu {
                         LoadWordSource::Immediate(_) => self.pc.wrapping_add(3),
                     }
                 }
-                LoadType::COffset(source) => {
+                LoadType::COffset(direction) => {
                     let address = 0xFF00 + self.registers.c as u16;
-                    match source {
-                        LoadCOffsetSource::C => {
-                            self.registers.a = self.bus.read_byte(address);
-                            eprintln!("  A = *({:#4x}) = {:#2x}", address, self.registers.a);
-                        }
-                        LoadCOffsetSource::A => {
-                            self.bus.write_byte(address, self.registers.a);
+
+                    match direction {
+                        Direction::FromA => {
                             eprintln!("  *({:#4x}) = A = {:#2x}", address, self.registers.a);
+                            self.bus.write_byte(address, self.registers.a)
+                        }
+                        Direction::IntoA => {
+                            eprintln!("  A = *({:#4x}) = {:#2x}", address, self.registers.a);
+                            self.registers.a = self.bus.read_byte(address);
                         }
                     };
 

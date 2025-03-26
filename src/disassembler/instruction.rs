@@ -14,7 +14,7 @@ pub enum LoadType {
     Indirect(LoadIndirect, Direction),
     Byte(Register, RegisterOrImmediate),
     Word(RegisterPairsSP, LoadWordSource),
-    COffset(LoadCOffsetSource),
+    COffset(Direction),
 }
 
 #[derive(Debug)]
@@ -56,12 +56,6 @@ pub enum LoadByteSource {
 #[derive(Debug)]
 pub enum LoadWordSource {
     Immediate(u16),
-}
-
-#[derive(Debug)]
-pub enum LoadCOffsetSource {
-    C,
-    A,
 }
 
 #[derive(Debug)]

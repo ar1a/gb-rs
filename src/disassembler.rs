@@ -1,7 +1,6 @@
 use instruction::*;
 use nom::{
     IResult, Parser, bits,
-    bytes::complete::take,
     error::Error,
     number::{le_i8, le_u8, le_u16},
 };
@@ -89,6 +88,18 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
             )
         }
         3 => match z {
+            2 => match y {
+                4 | 6 => {
+                    let direction = match y {
+                        4 => Direction::FromA,
+                        6 => Direction::IntoA,
+                        _ => unreachable!(),
+                    };
+
+                    (i, Instruction::Ld(LoadType::COffset(direction)))
+                }
+                _ => nyi(),
+            },
             3 => match y {
                 1 => prefixed_instruction(i)?,
                 _ => nyi(),
