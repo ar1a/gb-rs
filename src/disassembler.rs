@@ -80,6 +80,13 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                     Instruction::Ld(LoadType::Byte(reg, RegisterOrImmediate::Immediate(value))),
                 )
             }
+            7 => match y {
+                0 => (i, Instruction::Rlca),
+                1 => (i, Instruction::Rrca),
+                2 => (i, Instruction::Rla),
+                3 => (i, Instruction::Rra),
+                _ => nyi(),
+            },
             _ => nyi(),
         },
         1 => match z {
@@ -180,6 +187,11 @@ fn prefixed_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
         format!("impossible prefixed state! X:{x} Z:{z} Y:{y}\ndid you increment pc incorrectly?");
 
     Ok(match x {
+        0 => {
+            let reg = Register::from_u8(z).unwrap();
+            let rot = Rot::from_u8(y).unwrap();
+            (i, Instruction::Rot(rot, reg))
+        }
         1 => {
             let reg = Register::from_u8(z).unwrap();
             (i, Instruction::Bit(y, reg))

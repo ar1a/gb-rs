@@ -199,6 +199,22 @@ impl Cpu {
                 self.push(value);
                 self.pc.wrapping_add(1)
             }
+            Instruction::Rot(rot, register) => match rot {
+                Rot::Rl => {
+                    let value = self.match_register(register);
+                    eprintln!("  RL {:?}", register);
+                    let new_value = self.rotate_left_through_carry(value, true);
+                    self.write_register(register, new_value);
+
+                    self.pc.wrapping_add(2)
+                }
+                _ => todo!("unimplemented instruction: {:?}", instruction),
+            },
+            Instruction::Rla => {
+                eprintln!("  RLA");
+                self.registers.a = self.rotate_left_through_carry(self.registers.a, false);
+                self.pc.wrapping_add(1)
+            }
             _ => todo!("unimplemented instruction: {:?}", instruction),
         }
     }
@@ -318,6 +334,17 @@ impl Cpu {
         flags.remove(Flags::Subtraction);
         // HalfCarry is set if the lower 4 bits added together don't fit in the lower 4 bits
         flags.set(Flags::HalfCarry, (value & 0b1111) + 1 > 0b1111);
+        new_value
+    }
+
+    fn rotate_left_through_carry(&mut self, value: u8, set_zero: bool) -> u8 {
+        let carry = self.registers.f.contains(Flags::Carry) as u8;
+        let new_value = value << 1 | carry;
+        let flags = &mut self.registers.f;
+        flags.set(Flags::Zero, new_value == 0 && set_zero);
+        flags.remove(make_bitflags!(Flags::{Subtraction | HalfCarry}));
+        flags.set(Flags::Carry, value >> 7 == 1);
+
         new_value
     }
 }

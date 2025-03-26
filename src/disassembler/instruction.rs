@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use num_derive::FromPrimitive;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Instruction {
     Ld(LoadType),
     Arithmetic(Alu, RegisterOrImmediate),
@@ -11,9 +11,14 @@ pub enum Instruction {
     Call(JumpTest, u16),
     Push(RegisterPairsAF),
     Pop(RegisterPairsAF),
+    Rot(Rot, Register),
+    Rlca,
+    Rrca,
+    Rla,
+    Rra,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum LoadType {
     Indirect(LoadIndirect, Direction),
     Byte(Register, RegisterOrImmediate),
@@ -21,19 +26,19 @@ pub enum LoadType {
     LastByteAddress(COrImmediate, Direction),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum RegisterOrImmediate {
     Register(Register),
     Immediate(u8),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum COrImmediate {
     C,
     Immediate(u8),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum LoadByteTarget {
     A,
     B,
@@ -44,7 +49,7 @@ pub enum LoadByteTarget {
     HL,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum LoadIndirect {
     BC,
     DE,
@@ -52,23 +57,23 @@ pub enum LoadIndirect {
     HLInc,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Direction {
     FromA,
     IntoA,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum LoadByteSource {
     Value(u8),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum LoadWordSource {
     Immediate(u16),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum LoadByteDecTarget {
     A,
     HL,
@@ -96,14 +101,14 @@ pub enum Register {
     A,
 }
 
-#[derive(Debug, FromPrimitive)]
+#[derive(Debug, FromPrimitive, Clone, Copy)]
 pub enum RegisterPairsSP {
     BC,
     DE,
     HL,
     SP,
 }
-#[derive(Debug, FromPrimitive)]
+#[derive(Debug, FromPrimitive, Clone, Copy)]
 pub enum RegisterPairsAF {
     BC,
     DE,
@@ -111,7 +116,7 @@ pub enum RegisterPairsAF {
     AF,
 }
 
-#[derive(Debug, FromPrimitive)]
+#[derive(Debug, FromPrimitive, Clone, Copy)]
 pub enum Alu {
     Add,
     Adc,
@@ -123,7 +128,7 @@ pub enum Alu {
     Cp,
 }
 
-#[derive(Debug, FromPrimitive)]
+#[derive(Debug, FromPrimitive, Clone, Copy)]
 pub enum Rot {
     Rlc,
     Rrc,
