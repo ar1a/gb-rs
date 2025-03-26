@@ -141,19 +141,22 @@ impl Cpu {
             Instruction::Arithmetic(alu, source) => match alu {
                 Alu::Xor => {
                     let value = match source {
-                        Registers8Bit::A => self.registers.a,
-                        Registers8Bit::B => self.registers.b,
-                        Registers8Bit::C => self.registers.c,
-                        Registers8Bit::D => self.registers.d,
-                        Registers8Bit::E => self.registers.e,
-                        Registers8Bit::L => self.registers.l,
-                        Registers8Bit::H => self.registers.h,
-                        Registers8Bit::HLIndirect => self.bus.read_byte(self.registers.hl()),
+                        RegisterOrImmediate::Register(ref register) => match register {
+                            Register::A => self.registers.a,
+                            Register::B => self.registers.b,
+                            Register::C => self.registers.c,
+                            Register::D => self.registers.d,
+                            Register::E => self.registers.e,
+                            Register::L => self.registers.l,
+                            Register::H => self.registers.h,
+                            Register::HLIndirect => self.bus.read_byte(self.registers.hl()),
+                        },
+                        RegisterOrImmediate::Immediate(value) => todo!(),
                     };
                     self.registers.a = self.xor(value);
                     eprintln!("  A ^= {:?} = {:#x}", source, self.registers.a);
                     match source {
-                        // XorSource::Value(_) => self.pc.wrapping_add(2),
+                        RegisterOrImmediate::Immediate(_) => self.pc.wrapping_add(2),
                         _ => self.pc.wrapping_add(1),
                     }
                 }

@@ -4,7 +4,7 @@ use num_derive::FromPrimitive;
 #[derive(Debug)]
 pub enum Instruction {
     Ld(LoadType),
-    Arithmetic(Alu, Registers8Bit),
+    Arithmetic(Alu, RegisterOrImmediate),
     Bit(u8, BitSource),
     JR(JumpTest, i8),
 }
@@ -15,6 +15,12 @@ pub enum LoadType {
     Byte(LoadByteTarget, LoadByteSource),
     Word(RegisterPairsSP, LoadWordSource),
     COffset(LoadCOffsetSource),
+}
+
+#[derive(Debug)]
+pub enum RegisterOrImmediate {
+    Register(Register),
+    Immediate(u8),
 }
 
 #[derive(Debug)]
@@ -86,7 +92,7 @@ pub enum JumpTest {
 }
 
 #[derive(Debug, FromPrimitive)]
-pub enum Registers8Bit {
+pub enum Register {
     B,
     C,
     D,

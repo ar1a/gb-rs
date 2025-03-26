@@ -64,9 +64,12 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
             _ => nyi(),
         },
         2 => {
-            let reg = Registers8Bit::from_u8(z).unwrap();
+            let reg = Register::from_u8(z).unwrap();
             let alu = Alu::from_u8(y).unwrap();
-            (i, Instruction::Arithmetic(alu, reg))
+            (
+                i,
+                Instruction::Arithmetic(alu, RegisterOrImmediate::Register(reg)),
+            )
         }
         1 | 3 => nyi(),
         _ => unreachable!("{}", unreachable),
