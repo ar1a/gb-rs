@@ -5,7 +5,7 @@ use num_derive::FromPrimitive;
 pub enum Instruction {
     Ld(LoadType),
     Arithmetic(Alu, RegisterOrImmediate),
-    Bit(u8, BitSource),
+    Bit(u8, Register),
     JR(JumpTest, i8),
 }
 
@@ -71,18 +71,6 @@ pub enum LoadByteDecTarget {
 }
 
 #[derive(Debug)]
-pub enum BitSource {
-    A,
-    B,
-    C,
-    D,
-    E,
-    H,
-    L,
-    HL,
-}
-
-#[derive(Debug)]
 pub enum JumpTest {
     NotZero,
     Zero,
@@ -91,7 +79,7 @@ pub enum JumpTest {
     Always,
 }
 
-#[derive(Debug, FromPrimitive)]
+#[derive(Debug, FromPrimitive, Copy, Clone)]
 pub enum Register {
     B,
     C,

@@ -141,17 +141,8 @@ impl Cpu {
             Instruction::Arithmetic(alu, source) => match alu {
                 Alu::Xor => {
                     let value = match source {
-                        RegisterOrImmediate::Register(ref register) => match register {
-                            Register::A => self.registers.a,
-                            Register::B => self.registers.b,
-                            Register::C => self.registers.c,
-                            Register::D => self.registers.d,
-                            Register::E => self.registers.e,
-                            Register::L => self.registers.l,
-                            Register::H => self.registers.h,
-                            Register::HLIndirect => self.bus.read_byte(self.registers.hl()),
-                        },
-                        RegisterOrImmediate::Immediate(value) => todo!(),
+                        RegisterOrImmediate::Register(register) => self.match_register(register),
+                        RegisterOrImmediate::Immediate(_value) => todo!(),
                     };
                     self.registers.a = self.xor(value);
                     eprintln!("  A ^= {:?} = {:#x}", source, self.registers.a);
@@ -162,27 +153,9 @@ impl Cpu {
                 }
                 _ => todo!("alu opertion: {:?} {:?}", alu, source),
             },
-            // Instruction::Add(target) => match target {
-            //     // FIXME: abstract this like the others
-            //     ArithmeticTarget::C => {
-            //         let value = self.registers.c;
-            //         let new_value = self.add(value);
-            //         self.registers.a = new_value;
-            //         self.pc.wrapping_add(1)
-            //     }
-            //     _ => todo!("unimplemented target: {:?}", target),
-            // },
-            Instruction::Bit(mask, source) => {
-                let value = match source {
-                    BitSource::A => self.registers.a,
-                    BitSource::B => self.registers.b,
-                    BitSource::C => self.registers.c,
-                    BitSource::D => self.registers.d,
-                    BitSource::E => self.registers.e,
-                    BitSource::H => self.registers.h,
-                    BitSource::L => self.registers.l,
-                    BitSource::HL => self.bus.read_byte(self.registers.hl()),
-                };
+            Instruction::Bit(bit, source) => {
+                let value = self.match_register(source);
+                let mask = 1 << bit;
                 self.bit(mask, value);
                 eprintln!(
                     "  {:?} {:#2x} (0b{:0>8b}) & 0b{:0>8b} = {}",
@@ -209,6 +182,19 @@ impl Cpu {
                 self.relative_jump(should_jump, relative)
             }
             _ => todo!("unimplemented instruction: {:?}", instruction),
+        }
+    }
+
+    fn match_register(&self, register: Register) -> u8 {
+        match register {
+            Register::A => self.registers.a,
+            Register::B => self.registers.b,
+            Register::C => self.registers.c,
+            Register::D => self.registers.d,
+            Register::E => self.registers.e,
+            Register::L => self.registers.l,
+            Register::H => self.registers.h,
+            Register::HLIndirect => self.bus.read_byte(self.registers.hl()),
         }
     }
 

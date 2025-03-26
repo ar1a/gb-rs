@@ -63,6 +63,7 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
             }
             _ => nyi(),
         },
+        1 => nyi(),
         2 => {
             let reg = Register::from_u8(z).unwrap();
             let alu = Alu::from_u8(y).unwrap();
@@ -71,7 +72,37 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 Instruction::Arithmetic(alu, RegisterOrImmediate::Register(reg)),
             )
         }
-        1 | 3 => nyi(),
+        3 => match z {
+            3 => match y {
+                1 => prefixed_instruction(i)?,
+                _ => nyi(),
+            },
+            _ => nyi(),
+        },
         _ => unreachable!("{}", unreachable),
+    })
+}
+
+fn prefixed_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
+    let (i, (x, y, z)) = bits::bits::<_, (u8, u8, u8), Error<_>, _, _>((
+        bits::complete::take(2usize),
+        bits::complete::take(3usize),
+        bits::complete::take(3usize),
+    ))
+    .parse(i)?;
+    assert!(x < 4);
+    assert!(y < 8);
+    assert!(z < 8);
+
+    let nyi = || todo!("prefixed instruction parse for X:{x} Z:{z} Y:{y}");
+    let unreachable =
+        format!("impossible prefixed state! X:{x} Z:{z} Y:{y}\ndid you increment pc incorrectly?");
+
+    Ok(match x {
+        1 => {
+            let reg = Register::from_u8(z).unwrap();
+            (i, Instruction::Bit(y, reg))
+        }
+        _ => nyi(),
     })
 }
