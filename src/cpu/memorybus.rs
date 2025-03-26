@@ -28,6 +28,7 @@ impl MemoryBus {
     pub fn read_byte(&self, address: u16) -> u8 {
         let address = address as usize;
         match address {
+            00..=0xFF => self.memory[address],
             VRAM_BEGIN..=VRAM_END => self.gpu.read_vram(address - VRAM_BEGIN),
             IO_BEGIN..=IO_END => self.io[address - IO_BEGIN],
             _ => todo!("memory region not mapped yet: {:#4x}", address),
@@ -36,6 +37,7 @@ impl MemoryBus {
     pub fn write_byte(&mut self, address: u16, value: u8) {
         let address = address as usize;
         match address {
+            00..=0xFF => self.memory[address] = value,
             VRAM_BEGIN..=VRAM_END => self.gpu.write_vram(address - VRAM_BEGIN, value),
             IO_BEGIN..=IO_END => self.io[address - IO_BEGIN] = value,
             _ => todo!("memory region not mapped yet: {:#4x}", address),
