@@ -12,7 +12,7 @@ pub enum Instruction {
 #[derive(Debug)]
 pub enum LoadType {
     Indirect(LoadIndirect, Direction),
-    Byte(LoadByteTarget, LoadByteSource),
+    Byte(Register, RegisterOrImmediate),
     Word(RegisterPairsSP, LoadWordSource),
     COffset(LoadCOffsetSource),
 }

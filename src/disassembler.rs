@@ -69,6 +69,14 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                     Instruction::Ld(LoadType::Indirect(indirect_type, direction)),
                 )
             }
+            6 => {
+                let reg = Register::from_u8(y).unwrap();
+                let (i, value) = le_u8().parse(i)?;
+                (
+                    i,
+                    Instruction::Ld(LoadType::Byte(reg, RegisterOrImmediate::Immediate(value))),
+                )
+            }
             _ => nyi(),
         },
         1 => nyi(),

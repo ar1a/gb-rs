@@ -86,24 +86,15 @@ impl Cpu {
                     eprintln!("  LD Indirect {:#?} {:?}", indirect_type, direction);
                     self.pc.wrapping_add(1)
                 }
-                LoadType::Byte(target, source) => {
-                    let source_value = match source {
-                        LoadByteSource::Value(x) => x,
+                LoadType::Byte(register, source) => {
+                    let value = match source {
+                        RegisterOrImmediate::Immediate(x) => x,
+                        RegisterOrImmediate::Register(reg) => self.match_register(reg),
                     };
-                    match target {
-                        LoadByteTarget::A => self.registers.a = source_value,
-                        LoadByteTarget::B => self.registers.b = source_value,
-                        LoadByteTarget::C => self.registers.c = source_value,
-                        LoadByteTarget::D => self.registers.d = source_value,
-                        LoadByteTarget::H => self.registers.h = source_value,
-                        LoadByteTarget::L => self.registers.l = source_value,
-                        LoadByteTarget::HL => {
-                            self.bus.write_byte(self.registers.hl(), source_value)
-                        }
-                    }
-                    eprintln!("  {:?} = {:#2x}", target, source_value);
+                    self.write_register(register, value);
+                    eprintln!("  {:?} = {:#2x}", register, value);
                     match source {
-                        LoadByteSource::Value(_) => self.pc.wrapping_add(2),
+                        RegisterOrImmediate::Immediate(_) => self.pc.wrapping_add(2),
                         _ => self.pc.wrapping_add(1),
                     }
                 }
@@ -195,6 +186,19 @@ impl Cpu {
             Register::L => self.registers.l,
             Register::H => self.registers.h,
             Register::HLIndirect => self.bus.read_byte(self.registers.hl()),
+        }
+    }
+
+    fn write_register(&mut self, register: Register, value: u8) {
+        match register {
+            Register::A => self.registers.a = value,
+            Register::B => self.registers.b = value,
+            Register::C => self.registers.c = value,
+            Register::D => self.registers.d = value,
+            Register::E => self.registers.e = value,
+            Register::L => self.registers.l = value,
+            Register::H => self.registers.h = value,
+            Register::HLIndirect => self.bus.write_byte(self.registers.hl(), value),
         }
     }
 
