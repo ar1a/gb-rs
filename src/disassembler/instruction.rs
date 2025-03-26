@@ -39,9 +39,10 @@ pub enum RegisterOrImmediate {
     Immediate(u8),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Display)]
 pub enum COrImmediate {
     C,
+    #[display("{0:02x}")]
     Immediate(u8),
 }
 
@@ -111,14 +112,14 @@ pub enum Register {
     A,
 }
 
-#[derive(Debug, FromPrimitive, Clone, Copy)]
+#[derive(Debug, FromPrimitive, Clone, Copy, Display)]
 pub enum Register16 {
     BC,
     DE,
     HL,
     SP,
 }
-#[derive(Debug, FromPrimitive, Clone, Copy)]
+#[derive(Debug, FromPrimitive, Clone, Copy, Display)]
 pub enum Register16Alt {
     BC,
     DE,

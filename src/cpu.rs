@@ -29,7 +29,7 @@ impl Cpu {
         self.debug_bytes_consumed
             .splice(.., slice[..bytes_consumed_len].iter().copied());
         let next_pc = self.execute(instruction);
-        eprintln!("{}", self.format_state()); // TODO: Log to a file instead
+        // eprintln!("{}", self.format_state()); // TODO: Log to a file instead
 
         self.pc = next_pc;
     }
@@ -145,25 +145,40 @@ impl Cpu {
                         LoadWordSource::Immediate(x) => x,
                     };
                     self.write_register16(register, source_value);
-                    eprintln!("  {:?} = {:#4x}", register, source_value);
+                    self.print_debug(&format!("LD {}, {:02x}", register, source_value), "");
                     match source {
                         LoadWordSource::Immediate(_) => self.pc.wrapping_add(3),
                     }
                 }
                 LoadType::LastByteAddress(source, direction) => {
                     let offset = match source {
-                        COrImmediate::C => self.registers.c,
+                        COrImmediate::C => {
+                            self.debug_context
+                                .push(format!("C = {:02x}", self.registers.c));
+                            self.registers.c
+                        }
                         COrImmediate::Immediate(x) => x,
                     };
                     let address = 0xFF00 + offset as u16;
 
                     match direction {
                         Direction::FromA => {
-                            eprintln!("  *({:#4x}) = A = {:#2x}", address, self.registers.a);
+                            self.debug_context
+                                .push(format!("A = {:02x}", self.registers.a));
+                            self.print_debug(
+                                &format!("LDH ({}), A", source),
+                                &self.format_context(),
+                            );
                             self.bus.write_byte(address, self.registers.a)
                         }
                         Direction::IntoA => {
-                            eprintln!("  A = *({:#4x}) = {:#2x}", address, self.registers.a);
+                            let value = self.bus.read_byte(address);
+                            self.debug_context
+                                .push(format!("({:04x}) = {:02x}", address, value));
+                            self.print_debug(
+                                &format!("LDH A, ({})", source),
+                                &self.format_context(),
+                            );
                             self.registers.a = self.bus.read_byte(address);
                         }
                     };
