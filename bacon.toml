@@ -44,6 +44,8 @@ need_stdout = false
 [jobs.test]
 command = ["cargo", "test"]
 need_stdout = true
+on_success = "scroll-to-bottom"
+on_failure = "scroll-to-bottom"
 
 [jobs.nextest]
 command = [
