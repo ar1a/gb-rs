@@ -63,30 +63,27 @@ impl Cpu {
         #![allow(clippy::infallible_destructuring_match)]
         match instruction {
             Instruction::Ld(load_type) => match load_type {
-                LoadType::ByteDec(target) => {
-                    match target {
-                        LoadByteDecTarget::A => {
-                            self.registers.a = self.bus.read_byte(self.registers.hl());
-                            eprintln!(
-                                "  {:?} = *({:#4x}) = {:#x}",
-                                target,
-                                self.registers.hl(),
-                                self.registers.a
-                            );
-                        }
-                        LoadByteDecTarget::HL => {
-                            self.bus.write_byte(self.registers.hl(), self.registers.a);
-                            eprintln!(
-                                "  *({:?}) = {:#x} ({:?} is {:#4x})",
-                                target,
-                                self.registers.a,
-                                target,
-                                self.registers.hl(),
-                            );
-                        }
+                LoadType::Indirect(indirect_type, direction) => {
+                    let address = match indirect_type {
+                        LoadIndirect::BC => self.registers.bc(),
+                        LoadIndirect::DE => self.registers.de(),
+                        LoadIndirect::HLDec | LoadIndirect::HLInc => self.registers.hl(),
                     };
-                    self.registers.set_hl(self.registers.hl() - 1);
-                    eprintln!("  HL = {:#4x}", self.registers.hl());
+
+                    match direction {
+                        Direction::IntoA => self.registers.a = self.bus.read_byte(address),
+                        Direction::FromA => self.bus.write_byte(address, self.registers.a),
+                    };
+
+                    let adjust = match indirect_type {
+                        LoadIndirect::HLDec => -1,
+                        LoadIndirect::HLInc => 1,
+                        _ => 0,
+                    };
+                    if adjust != 0 {
+                        self.registers.set_hl(address.wrapping_add_signed(adjust));
+                    }
+                    eprintln!("  LD Indirect {:#?} {:?}", indirect_type, direction);
                     self.pc.wrapping_add(1)
                 }
                 LoadType::Byte(target, source) => {
@@ -141,42 +138,37 @@ impl Cpu {
                     self.pc.wrapping_add(1)
                 }
             },
-            Instruction::Add(target) => match target {
-                // FIXME: abstract this like the others
-                ArithmeticTarget::C => {
-                    let value = self.registers.c;
-                    let new_value = self.add(value);
-                    self.registers.a = new_value;
-                    self.pc.wrapping_add(1)
+            Instruction::Arithmetic(alu, source) => match alu {
+                Alu::Xor => {
+                    let value = match source {
+                        Registers8Bit::A => self.registers.a,
+                        Registers8Bit::B => self.registers.b,
+                        Registers8Bit::C => self.registers.c,
+                        Registers8Bit::D => self.registers.d,
+                        Registers8Bit::E => self.registers.e,
+                        Registers8Bit::L => self.registers.l,
+                        Registers8Bit::H => self.registers.h,
+                        Registers8Bit::HLIndirect => self.bus.read_byte(self.registers.hl()),
+                    };
+                    self.registers.a = self.xor(value);
+                    eprintln!("  A ^= {:?} = {:#x}", source, self.registers.a);
+                    match source {
+                        // XorSource::Value(_) => self.pc.wrapping_add(2),
+                        _ => self.pc.wrapping_add(1),
+                    }
                 }
-                _ => todo!("unimplemented target: {:?}", target),
+                _ => todo!("alu opertion: {:?} {:?}", alu, source),
             },
-            // Adc
-            // Sub
-            // Sbc
-            // And
-            // Or
-            Instruction::Xor(source) => {
-                let value = match source {
-                    XorSource::A => self.registers.a,
-                    XorSource::B => self.registers.b,
-                    XorSource::C => self.registers.c,
-                    XorSource::D => self.registers.d,
-                    XorSource::E => self.registers.e,
-                    XorSource::L => self.registers.l,
-                    XorSource::HL => self.bus.read_byte(self.registers.hl()),
-                    XorSource::Value(x) => x,
-                };
-                self.registers.a = self.xor(value);
-                eprintln!("  A ^= {:?} = {:#x}", source, self.registers.a);
-                match source {
-                    XorSource::Value(_) => self.pc.wrapping_add(2),
-                    _ => self.pc.wrapping_add(1),
-                }
-            }
-            // Cp
-            // Inc
-            // Dec
+            // Instruction::Add(target) => match target {
+            //     // FIXME: abstract this like the others
+            //     ArithmeticTarget::C => {
+            //         let value = self.registers.c;
+            //         let new_value = self.add(value);
+            //         self.registers.a = new_value;
+            //         self.pc.wrapping_add(1)
+            //     }
+            //     _ => todo!("unimplemented target: {:?}", target),
+            // },
             Instruction::Bit(mask, source) => {
                 let value = match source {
                     BitSource::A => self.registers.a,
@@ -259,20 +251,6 @@ impl Cpu {
 #[cfg(test)]
 mod test {
     use super::*;
-    #[test]
-    fn test_add() {
-        let mut cpu = Cpu::default();
-        cpu.registers.a = u8::MAX - 1;
-        cpu.registers.c = 1;
-
-        cpu.execute(Instruction::Add(ArithmeticTarget::C));
-        assert_eq!(cpu.registers.a, 255);
-        assert!(!cpu.registers.f.contains(Flags::Carry));
-
-        cpu.execute(Instruction::Add(ArithmeticTarget::C));
-        assert_eq!(cpu.registers.a, 0);
-        assert!(cpu.registers.f.contains(Flags::Carry));
-    }
 
     #[test]
     fn test_boot_rom() {

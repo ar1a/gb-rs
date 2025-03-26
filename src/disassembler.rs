@@ -24,13 +24,16 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
     let q = y % 2;
 
     let nyi = || todo!("instruction parse for X:{x} Z:{z} Y:{y} P:{p} Q:{q}");
+    let unreachable = format!(
+        "impossible state! X:{x} Z:{z} Y:{y} P:{p} Q:{q}\ndid you increment pc incorrectly?"
+    );
 
     Ok(match x {
         0 => match z {
             1 => match q {
                 0 => {
                     let (i, target) = le_u16().parse(i)?;
-                    let reg = RegisterPairsSP::from_u8(p).expect("p should be within range 0-3");
+                    let reg = RegisterPairsSP::from_u8(p).unwrap();
 
                     (
                         i,
@@ -38,11 +41,34 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                     )
                 }
                 1 => nyi(),
-                _ => unreachable!(),
+                _ => unreachable!("{}", unreachable),
             },
+            2 => {
+                let direction = match q {
+                    0 => Direction::FromA,
+                    1 => Direction::IntoA,
+                    _ => unreachable!("{}", unreachable),
+                };
+                let indirect_type = match p {
+                    0 => LoadIndirect::BC,
+                    1 => LoadIndirect::DE,
+                    2 => LoadIndirect::HLInc,
+                    3 => LoadIndirect::HLDec,
+                    _ => unreachable!("{}", unreachable),
+                };
+                (
+                    i,
+                    Instruction::Ld(LoadType::Indirect(indirect_type, direction)),
+                )
+            }
             _ => nyi(),
         },
-        1..3 => nyi(),
-        _ => unreachable!(),
+        2 => {
+            let reg = Registers8Bit::from_u8(z).unwrap();
+            let alu = Alu::from_u8(y).unwrap();
+            (i, Instruction::Arithmetic(alu, reg))
+        }
+        1 | 3 => nyi(),
+        _ => unreachable!("{}", unreachable),
     })
 }

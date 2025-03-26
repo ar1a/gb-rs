@@ -4,26 +4,14 @@ use num_derive::FromPrimitive;
 #[derive(Debug)]
 pub enum Instruction {
     Ld(LoadType),
-    Add(ArithmeticTarget),
-    Xor(XorSource),
+    Arithmetic(Alu, Registers8Bit),
     Bit(u8, BitSource),
     JR(JumpTest, i8),
 }
 
 #[derive(Debug)]
-pub enum ArithmeticTarget {
-    A,
-    B,
-    C,
-    D,
-    E,
-    H,
-    L,
-}
-
-#[derive(Debug)]
 pub enum LoadType {
-    ByteDec(LoadByteDecTarget),
+    Indirect(LoadIndirect, Direction),
     Byte(LoadByteTarget, LoadByteSource),
     Word(RegisterPairsSP, LoadWordSource),
     COffset(LoadCOffsetSource),
@@ -38,6 +26,20 @@ pub enum LoadByteTarget {
     H,
     L,
     HL,
+}
+
+#[derive(Debug)]
+pub enum LoadIndirect {
+    BC,
+    DE,
+    HLDec,
+    HLInc,
+}
+
+#[derive(Debug)]
+pub enum Direction {
+    FromA,
+    IntoA,
 }
 
 #[derive(Debug)]
@@ -60,18 +62,6 @@ pub enum LoadCOffsetSource {
 pub enum LoadByteDecTarget {
     A,
     HL,
-}
-
-#[derive(Debug)]
-pub enum XorSource {
-    A,
-    B,
-    C,
-    D,
-    E,
-    L,
-    HL,
-    Value(u8),
 }
 
 #[derive(Debug)]
