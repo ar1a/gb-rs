@@ -30,37 +30,37 @@ pub(super) enum Flags {
 
 impl Registers {
     pub(super) const fn bc(&self) -> u16 {
-        u16::from_le_bytes([self.b, self.c])
+        u16::from_le_bytes([self.c, self.b])
     }
     pub(super) const fn set_bc(&mut self, value: u16) {
-        let [b, c] = value.to_le_bytes();
+        let [c, b] = value.to_le_bytes();
         self.b = b;
         self.c = c;
     }
 
     pub(super) fn af(&self) -> u16 {
-        u16::from_le_bytes([self.a, self.f.bits()])
+        u16::from_le_bytes([self.f.bits(), self.a])
     }
     pub(super) fn set_af(&mut self, value: u16) {
-        let [a, f] = value.to_le_bytes();
+        let [f, a] = value.to_le_bytes();
         self.a = a;
         self.f = Flags::from_bits(f).unwrap();
     }
 
     pub(super) const fn de(&self) -> u16 {
-        u16::from_le_bytes([self.d, self.e])
+        u16::from_le_bytes([self.e, self.d])
     }
     pub(super) const fn set_de(&mut self, value: u16) {
-        let [d, e] = value.to_le_bytes();
+        let [e, d] = value.to_le_bytes();
         self.d = d;
         self.e = e;
     }
 
     pub(super) const fn hl(&self) -> u16 {
-        u16::from_le_bytes([self.h, self.l])
+        u16::from_le_bytes([self.l, self.h])
     }
     pub(super) const fn set_hl(&mut self, value: u16) {
-        let [h, l] = value.to_le_bytes();
+        let [l, h] = value.to_le_bytes();
         self.h = h;
         self.l = l;
     }
