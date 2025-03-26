@@ -103,10 +103,10 @@ impl Cpu {
                         LoadWordSource::Immediate(x) => x,
                     };
                     match target {
-                        RegisterPairsSP::SP => self.sp = source_value,
-                        RegisterPairsSP::BC => self.registers.set_bc(source_value),
-                        RegisterPairsSP::DE => self.registers.set_de(source_value),
-                        RegisterPairsSP::HL => self.registers.set_hl(source_value),
+                        Register16::SP => self.sp = source_value,
+                        Register16::BC => self.registers.set_bc(source_value),
+                        Register16::DE => self.registers.set_de(source_value),
+                        Register16::HL => self.registers.set_hl(source_value),
                     };
                     eprintln!("  {:?} = {:#4x}", target, source_value);
                     match source {
@@ -196,10 +196,10 @@ impl Cpu {
             }
             Instruction::Push(register) => {
                 let value = match register {
-                    RegisterPairsAF::BC => self.registers.bc(),
-                    RegisterPairsAF::DE => self.registers.de(),
-                    RegisterPairsAF::HL => self.registers.hl(),
-                    RegisterPairsAF::AF => self.registers.af(),
+                    Register16Alt::BC => self.registers.bc(),
+                    Register16Alt::DE => self.registers.de(),
+                    Register16Alt::HL => self.registers.hl(),
+                    Register16Alt::AF => self.registers.af(),
                 };
                 eprintln!("  PUSH {:?} ({:#04x})", register, value);
                 self.push(value);
@@ -209,10 +209,10 @@ impl Cpu {
                 let value = self.pop();
                 eprintln!("  POP {:?} {:#04x}", register, value);
                 match register {
-                    RegisterPairsAF::BC => self.registers.set_bc(value),
-                    RegisterPairsAF::DE => self.registers.set_de(value),
-                    RegisterPairsAF::HL => self.registers.set_hl(value),
-                    RegisterPairsAF::AF => self.registers.set_af(value),
+                    Register16Alt::BC => self.registers.set_bc(value),
+                    Register16Alt::DE => self.registers.set_de(value),
+                    Register16Alt::HL => self.registers.set_hl(value),
+                    Register16Alt::AF => self.registers.set_af(value),
                 }
                 self.pc.wrapping_add(1)
             }

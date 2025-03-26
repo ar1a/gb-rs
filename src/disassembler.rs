@@ -40,7 +40,7 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
             1 => match q {
                 0 => {
                     let (i, target) = le_u16().parse(i)?;
-                    let reg = RegisterPairsSP::from_u8(p).unwrap();
+                    let reg = Register16::from_u8(p).unwrap();
 
                     (
                         i,
@@ -138,7 +138,7 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
             },
             1 => match q {
                 0 => {
-                    let reg = RegisterPairsAF::from_u8(p).unwrap();
+                    let reg = Register16Alt::from_u8(p).unwrap();
                     (i, Instruction::Pop(reg))
                 }
                 1 => nyi(),
@@ -165,7 +165,7 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
             },
             5 => match q {
                 0 => {
-                    let reg = RegisterPairsAF::from_u8(p).unwrap();
+                    let reg = Register16Alt::from_u8(p).unwrap();
                     (i, Instruction::Push(reg))
                 }
                 1 => match p {

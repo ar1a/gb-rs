@@ -10,8 +10,8 @@ pub enum Instruction {
     Inc(Register),
     Dec(Register),
     Call(JumpTest, u16),
-    Push(RegisterPairsAF),
-    Pop(RegisterPairsAF),
+    Push(Register16Alt),
+    Pop(Register16Alt),
     Rot(Rot, Register),
     Rlca,
     Rrca,
@@ -23,7 +23,7 @@ pub enum Instruction {
 pub enum LoadType {
     Indirect(LoadIndirect, Direction),
     Byte(Register, RegisterOrImmediate),
-    Word(RegisterPairsSP, LoadWordSource),
+    Word(Register16, LoadWordSource),
     LastByteAddress(COrImmediate, Direction),
 }
 
@@ -103,14 +103,14 @@ pub enum Register {
 }
 
 #[derive(Debug, FromPrimitive, Clone, Copy)]
-pub enum RegisterPairsSP {
+pub enum Register16 {
     BC,
     DE,
     HL,
     SP,
 }
 #[derive(Debug, FromPrimitive, Clone, Copy)]
-pub enum RegisterPairsAF {
+pub enum Register16Alt {
     BC,
     DE,
     HL,
