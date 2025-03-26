@@ -177,7 +177,13 @@ impl Cpu {
             Instruction::Inc(register) => {
                 let inc = self.inc(self.match_register(register));
                 self.write_register(register, inc);
-                eprintln!("  INC {:?} = {:#02x}", register, inc);
+                eprintln!("  INC {:?}", register);
+                self.pc.wrapping_add(1)
+            }
+            Instruction::Dec(register) => {
+                let dec = self.dec(self.match_register(register));
+                self.write_register(register, dec);
+                eprintln!("  DEC {:?}", register);
                 self.pc.wrapping_add(1)
             }
             Instruction::Call(condition, address) => {
@@ -339,12 +345,22 @@ impl Cpu {
     }
 
     fn inc(&mut self, value: u8) -> u8 {
-        let (new_value, _overflow) = value.overflowing_add(1);
+        let new_value = value.wrapping_add(1);
         let flags = &mut self.registers.f;
         flags.set(Flags::Zero, new_value == 0);
         flags.remove(Flags::Subtraction);
         // HalfCarry is set if the lower 4 bits added together don't fit in the lower 4 bits
         flags.set(Flags::HalfCarry, (value & 0b1111) + 1 > 0b1111);
+        new_value
+    }
+
+    fn dec(&mut self, value: u8) -> u8 {
+        let new_value = value.wrapping_sub(1);
+        let flags = &mut self.registers.f;
+        flags.set(Flags::Zero, new_value == 0);
+        flags.insert(Flags::Subtraction);
+        // HalfCarry is set if the lower 4 bits are 0, meaning we needed a bit from the upper 4 bits
+        flags.set(Flags::HalfCarry, (value & 0b1111) == 0);
         new_value
     }
 

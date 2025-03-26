@@ -72,6 +72,10 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 let reg = Register::from_u8(y).unwrap();
                 (i, Instruction::Inc(reg))
             }
+            5 => {
+                let reg = Register::from_u8(y).unwrap();
+                (i, Instruction::Dec(reg))
+            }
             6 => {
                 let reg = Register::from_u8(y).unwrap();
                 let (i, value) = le_u8().parse(i)?;

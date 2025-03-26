@@ -8,6 +8,7 @@ pub enum Instruction {
     Bit(u8, Register),
     JR(JumpTest, i8),
     Inc(Register),
+    Dec(Register),
     Call(JumpTest, u16),
     Push(RegisterPairsAF),
     Pop(RegisterPairsAF),
