@@ -82,7 +82,22 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
             }
             _ => nyi(),
         },
-        1 => nyi(),
+        1 => match z {
+            1..6 | 7 => {
+                let target = Register::from_u8(y).unwrap();
+                let source = Register::from_u8(z).unwrap();
+
+                (
+                    i,
+                    Instruction::Ld(LoadType::Byte(
+                        target,
+                        RegisterOrImmediate::Register(source),
+                    )),
+                )
+            }
+            6 => nyi(),
+            _ => unreachable!("{}", unreachable),
+        },
         2 => {
             let reg = Register::from_u8(z).unwrap();
             let alu = Alu::from_u8(y).unwrap();
