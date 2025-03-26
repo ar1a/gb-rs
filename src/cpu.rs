@@ -173,6 +173,12 @@ impl Cpu {
                 );
                 self.relative_jump(should_jump, relative)
             }
+            Instruction::Inc(register) => {
+                let inc = self.inc(self.match_register(register));
+                self.write_register(register, inc);
+                eprintln!("  INC {:?} = {:#02x}", register, inc);
+                self.pc.wrapping_add(1)
+            }
             _ => todo!("unimplemented instruction: {:?}", instruction),
         }
     }
@@ -239,6 +245,16 @@ impl Cpu {
         } else {
             pc
         }
+    }
+
+    fn inc(&mut self, value: u8) -> u8 {
+        let (new_value, _overflow) = value.overflowing_add(1);
+        let flags = &mut self.registers.f;
+        flags.set(Flags::Zero, new_value == 0);
+        flags.remove(Flags::Subtraction);
+        // HalfCarry is set if the lower 4 bits added together don't fit in the lower 4 bits
+        flags.set(Flags::HalfCarry, (value & 0b1111) + 1 > 0b1111);
+        new_value
     }
 }
 

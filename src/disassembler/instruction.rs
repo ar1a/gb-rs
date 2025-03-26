@@ -7,6 +7,7 @@ pub enum Instruction {
     Arithmetic(Alu, RegisterOrImmediate),
     Bit(u8, Register),
     JR(JumpTest, i8),
+    Inc(Register),
 }
 
 #[derive(Debug)]

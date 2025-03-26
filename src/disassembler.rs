@@ -68,6 +68,10 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                     Instruction::Ld(LoadType::Indirect(indirect_type, direction)),
                 )
             }
+            4 => {
+                let reg = Register::from_u8(y).unwrap();
+                (i, Instruction::Inc(reg))
+            }
             6 => {
                 let reg = Register::from_u8(y).unwrap();
                 let (i, value) = le_u8().parse(i)?;
