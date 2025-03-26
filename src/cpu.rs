@@ -216,6 +216,22 @@ impl Cpu {
         }
     }
 
+    fn push(&mut self, value: u16) {
+        self.sp = self.sp.wrapping_sub(1);
+        self.bus.write_byte(self.sp, ((value & 0xFF00) >> 8) as u8);
+
+        self.sp = self.sp.wrapping_sub(1);
+        self.bus.write_byte(self.sp, (value & 0xFF) as u8);
+    }
+
+    fn pop(&mut self) -> u16 {
+        // BUG: If the stack pointer would wrap in the middle of this read, i think this will have
+        // incorrect behaviour
+        let word = self.bus.read_word(self.sp);
+        self.sp = self.sp.wrapping_add(2);
+        word
+    }
+
     fn add(&mut self, value: u8) -> u8 {
         let (new_value, overflow) = self.registers.a.overflowing_add(value);
         let flags = &mut self.registers.f;
