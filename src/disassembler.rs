@@ -68,6 +68,14 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                     Instruction::Ld(LoadType::Indirect(indirect_type, direction)),
                 )
             }
+            3 => {
+                let reg = Register16::from_u8(p).unwrap();
+                match q {
+                    0 => (i, Instruction::Inc16(reg)),
+                    1 => (i, Instruction::Dec16(reg)),
+                    _ => unreachable!("{}", unreachable),
+                }
+            }
             4 => {
                 let reg = Register::from_u8(y).unwrap();
                 (i, Instruction::Inc(reg))

@@ -98,17 +98,12 @@ impl Cpu {
                         _ => self.pc.wrapping_add(1),
                     }
                 }
-                LoadType::Word(target, source) => {
+                LoadType::Word(register, source) => {
                     let source_value = match source {
                         LoadWordSource::Immediate(x) => x,
                     };
-                    match target {
-                        Register16::SP => self.sp = source_value,
-                        Register16::BC => self.registers.set_bc(source_value),
-                        Register16::DE => self.registers.set_de(source_value),
-                        Register16::HL => self.registers.set_hl(source_value),
-                    };
-                    eprintln!("  {:?} = {:#4x}", target, source_value);
+                    self.write_register16(register, source_value);
+                    eprintln!("  {:?} = {:#4x}", register, source_value);
                     match source {
                         LoadWordSource::Immediate(_) => self.pc.wrapping_add(3),
                     }
@@ -175,14 +170,26 @@ impl Cpu {
                 self.relative_jump(should_jump, relative)
             }
             Instruction::Inc(register) => {
-                let inc = self.inc(self.match_register(register));
-                self.write_register(register, inc);
+                let value = self.inc(self.match_register(register));
+                self.write_register(register, value);
+                eprintln!("  INC {:?}", register);
+                self.pc.wrapping_add(1)
+            }
+            Instruction::Inc16(register) => {
+                let value = dbg!(self.match_register16(register)).wrapping_add(1);
+                self.write_register16(register, value);
                 eprintln!("  INC {:?}", register);
                 self.pc.wrapping_add(1)
             }
             Instruction::Dec(register) => {
-                let dec = self.dec(self.match_register(register));
-                self.write_register(register, dec);
+                let value = self.dec(self.match_register(register));
+                self.write_register(register, value);
+                eprintln!("  DEC {:?}", register);
+                self.pc.wrapping_add(1)
+            }
+            Instruction::Dec16(register) => {
+                let value = self.match_register16(register).wrapping_sub(1);
+                self.write_register16(register, value);
                 eprintln!("  DEC {:?}", register);
                 self.pc.wrapping_add(1)
             }
@@ -260,6 +267,24 @@ impl Cpu {
             Register::H => self.registers.h = value,
             Register::HLIndirect => self.bus.write_byte(self.registers.hl(), value),
         }
+    }
+
+    fn match_register16(&self, register: Register16) -> u16 {
+        match register {
+            Register16::SP => self.sp,
+            Register16::BC => self.registers.bc(),
+            Register16::DE => self.registers.de(),
+            Register16::HL => self.registers.hl(),
+        }
+    }
+
+    fn write_register16(&mut self, register: Register16, value: u16) {
+        match register {
+            Register16::SP => self.sp = value,
+            Register16::BC => self.registers.set_bc(value),
+            Register16::DE => self.registers.set_de(value),
+            Register16::HL => self.registers.set_hl(value),
+        };
     }
 
     fn match_jump_condition(&self, condition: JumpTest) -> bool {
