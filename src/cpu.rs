@@ -330,13 +330,17 @@ impl Cpu {
                     Register16Alt::HL => self.registers.hl(),
                     Register16Alt::AF => self.registers.af(),
                 };
-                eprintln!("  PUSH {:?} ({:#04x})", register, value);
+                self.debug_context
+                    .push(format!("{} = {:04X}", register, value));
                 self.push(value);
+                self.print_debug(&format!("PUSH {}", register), &self.format_context());
                 self.pc.wrapping_add(1)
             }
             Instruction::Pop(register) => {
                 let value = self.pop();
-                eprintln!("  POP {:?} {:#04x}", register, value);
+                self.debug_context
+                    .insert(0, format!("{}' = {:04X}", register, value));
+                self.print_debug(&format!("POP {}", register), &self.format_context());
                 match register {
                     Register16Alt::BC => self.registers.set_bc(value),
                     Register16Alt::DE => self.registers.set_de(value),
@@ -562,9 +566,14 @@ impl Cpu {
         let new_value = value.wrapping_sub(1);
         let flags = &mut self.registers.f;
         flags.set(Flags::Zero, new_value == 0);
+        self.debug_context
+            .push(format!("Z' = {}", (new_value == 0) as u8));
         flags.insert(Flags::Subtraction);
         // HalfCarry is set if the lower 4 bits are 0, meaning we needed a bit from the upper 4 bits
-        flags.set(Flags::HalfCarry, (value & 0b1111) == 0);
+        let half_carry = (value & 0b1111) == 0;
+        flags.set(Flags::HalfCarry, half_carry);
+        self.debug_context
+            .push(format!("H' = {}", half_carry as u8));
         new_value
     }
 
