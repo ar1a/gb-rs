@@ -280,15 +280,30 @@ impl Cpu {
                 self.pc.wrapping_add(1)
             }
             Instruction::Dec(register) => {
-                let value = self.dec(self.match_register(register));
-                self.write_register(register, value);
-                eprintln!("  DEC {:?}", register);
+                let value = self.match_register(register);
+                let new_value = self.dec(value);
+                self.write_register(register, new_value);
+
+                self.print_debug(
+                    &format!("DEC {}", register),
+                    &format!(
+                        "{} = {:02X}, {}' = {:02X}",
+                        register, value, register, new_value
+                    ),
+                );
                 self.pc.wrapping_add(1)
             }
             Instruction::Dec16(register) => {
-                let value = self.match_register16(register).wrapping_sub(1);
-                self.write_register16(register, value);
-                eprintln!("  DEC {:?}", register);
+                let value = self.match_register16(register);
+                let new_value = value.wrapping_sub(1);
+                self.write_register16(register, new_value);
+                self.print_debug(
+                    &format!("DEC {}", register),
+                    &format!(
+                        "{} = {:04X}, {}' = {:04X}",
+                        register, value, register, new_value
+                    ),
+                );
                 self.pc.wrapping_add(1)
             }
             Instruction::Call(condition, address) => {
