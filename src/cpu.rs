@@ -365,8 +365,13 @@ impl Cpu {
                 _ => todo!("unimplemented instruction: {:?}", instruction),
             },
             Instruction::Rla => {
-                eprintln!("  RLA");
+                self.debug_context
+                    .push(format!("A = {:02X}", self.registers.a));
                 self.registers.a = self.rotate_left_through_carry(self.registers.a, false);
+                self.debug_context
+                    .insert(1, format!("A' = {:02X}", self.registers.a));
+
+                self.print_debug("RLA", &self.format_context());
                 self.pc.wrapping_add(1)
             }
             _ => todo!("unimplemented instruction: {:?}", instruction),
