@@ -1,4 +1,5 @@
 use enumflags2::{BitFlag as _, BitFlags, bitflags};
+use parse_display::Display;
 
 /// Base registers
 #[derive(Debug, Default)]
@@ -16,15 +17,19 @@ pub(super) struct Registers {
 
 #[bitflags]
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Display)]
 pub(super) enum Flags {
     /// Set if the result of an operation is zero
+    #[display("Z")]
     Zero = 0b1000_0000,
     /// Set if previous instruction was a Subtraction
+    #[display("N")]
     Subtraction = 0b0100_0000,
     /// Set if lower 4 bits carried over to upper 4 bits
+    #[display("H")]
     HalfCarry = 0b0010_0000,
     /// Set when something overflows
+    #[display("C")]
     Carry = 0b0001_0000,
 }
 
@@ -63,5 +68,10 @@ impl Registers {
         let [l, h] = value.to_le_bytes();
         self.h = h;
         self.l = l;
+    }
+
+    pub fn set_flag(&mut self, flag: Flags, condition: bool) -> String {
+        self.f.set(flag, condition);
+        format!("{}' = {}", flag, condition as u8)
     }
 }

@@ -422,36 +422,19 @@ impl Cpu {
         };
     }
 
+    fn flags_contains(&mut self, flag: Flags) -> bool {
+        let contains = self.registers.f.contains(flag);
+        self.debug_context
+            .push(format!("{} = {}", flag, contains as u8));
+        contains
+    }
+
     fn match_jump_condition(&mut self, condition: JumpTest) -> bool {
         match condition {
-            JumpTest::NotZero => {
-                self.debug_context.push(format!(
-                    "Z = {}",
-                    self.registers.f.contains(Flags::Zero) as u8
-                ));
-                !self.registers.f.contains(Flags::Zero)
-            }
-            JumpTest::Zero => {
-                self.debug_context.push(format!(
-                    "Z = {}",
-                    self.registers.f.contains(Flags::Zero) as u8
-                ));
-                self.registers.f.contains(Flags::Zero)
-            }
-            JumpTest::NotCarry => {
-                self.debug_context.push(format!(
-                    "C = {}",
-                    self.registers.f.contains(Flags::Carry) as u8
-                ));
-                !self.registers.f.contains(Flags::Carry)
-            }
-            JumpTest::Carry => {
-                self.debug_context.push(format!(
-                    "C = {}",
-                    self.registers.f.contains(Flags::Carry) as u8
-                ));
-                self.registers.f.contains(Flags::Carry)
-            }
+            JumpTest::NotZero => !self.flags_contains(Flags::Zero),
+            JumpTest::Zero => self.flags_contains(Flags::Zero),
+            JumpTest::NotCarry => !self.flags_contains(Flags::Carry),
+            JumpTest::Carry => self.flags_contains(Flags::Carry),
             JumpTest::Always => true,
         }
     }
@@ -496,12 +479,11 @@ impl Cpu {
 
     fn add(&mut self, value: u8) -> u8 {
         let (new_value, overflow) = self.registers.a.overflowing_add(value);
-        let flags = &mut self.registers.f;
-        flags.set(Flags::Zero, new_value == 0);
-        flags.remove(Flags::Subtraction);
-        flags.set(Flags::Carry, overflow);
+        self.set_flag(Flags::Zero, new_value == 0);
+        self.registers.f.remove(Flags::Subtraction);
+        self.set_flag(Flags::Carry, overflow);
         // HalfCarry is set if the lower 4 bits added together don't fit in the lower 4 bits
-        flags.set(
+        self.set_flag(
             Flags::HalfCarry,
             (self.registers.a & 0b1111) + (value & 0b1111) > 0b1111,
         );
@@ -511,40 +493,30 @@ impl Cpu {
     fn xor(&mut self, value: u8) -> u8 {
         let new_value = self.registers.a ^ value;
         self.debug_context.push(format!("A' = {:02X}", new_value));
-        let flags = &mut self.registers.f;
-        let zero = new_value == 0;
-        flags.set(Flags::Zero, zero);
-        self.debug_context.push(format!("Z' = {}", zero as u8));
-        flags.remove(make_bitflags!(Flags::{Subtraction | Carry | HalfCarry}));
+        self.set_flag(Flags::Zero, new_value == 0);
+        self.registers
+            .f
+            .remove(make_bitflags!(Flags::{Subtraction | Carry | HalfCarry}));
         new_value
     }
 
     fn cp(&mut self, value: u8) {
-        let flags = &mut self.registers.f;
+        self.set_flag(Flags::Zero, self.registers.a == value);
 
-        let zero = self.registers.a == value;
-        flags.set(Flags::Zero, zero);
-        self.debug_context.push(format!("Z' = {}", zero as u8));
+        self.registers.f.insert(Flags::Subtraction);
 
-        flags.insert(Flags::Subtraction);
+        self.set_flag(
+            Flags::HalfCarry,
+            (self.registers.a & 0b1111) < (value & 0b1111),
+        );
 
-        let half_carry = (self.registers.a & 0b1111) < (value & 0b1111);
-        flags.set(Flags::HalfCarry, half_carry);
-        self.debug_context
-            .push(format!("H' = {}", half_carry as u8));
-
-        let carry = self.registers.a < value;
-        flags.set(Flags::Carry, carry);
-        self.debug_context.push(format!("C' = {}", carry as u8));
+        self.set_flag(Flags::Carry, self.registers.a < value);
     }
 
     fn bit(&mut self, mask: u8, value: u8) {
-        let flags = &mut self.registers.f;
-        let zero = value & mask == 0;
-        flags.set(Flags::Zero, zero);
-        self.debug_context.push(format!("Z' = {}", zero as u8));
-        flags.remove(Flags::Subtraction);
-        flags.insert(Flags::HalfCarry);
+        self.set_flag(Flags::Zero, value & mask == 0);
+        self.registers.f.remove(Flags::Subtraction);
+        self.registers.f.insert(Flags::HalfCarry);
     }
 
     fn relative_jump(&mut self, should_jump: bool, offset: i8) -> u16 {
@@ -558,51 +530,43 @@ impl Cpu {
 
     fn inc(&mut self, value: u8) -> u8 {
         let new_value = value.wrapping_add(1);
-        let flags = &mut self.registers.f;
-        flags.set(Flags::Zero, new_value == 0);
-        self.debug_context
-            .push(format!("Z' = {}", (new_value == 0) as u8));
-        flags.remove(Flags::Subtraction);
+        self.set_flag(Flags::Zero, new_value == 0);
+        self.registers.f.remove(Flags::Subtraction);
         // HalfCarry is set if the lower 4 bits added together don't fit in the lower 4 bits
         let half_carry = (value & 0b1111) + 1 > 0b1111;
-        flags.set(Flags::HalfCarry, half_carry);
-        self.debug_context
-            .push(format!("H' = {}", half_carry as u8));
+        self.set_flag(Flags::HalfCarry, half_carry);
         new_value
     }
 
     fn dec(&mut self, value: u8) -> u8 {
         let new_value = value.wrapping_sub(1);
-        let flags = &mut self.registers.f;
-        flags.set(Flags::Zero, new_value == 0);
+        self.set_flag(Flags::Zero, new_value == 0);
         self.debug_context
             .push(format!("Z' = {}", (new_value == 0) as u8));
-        flags.insert(Flags::Subtraction);
+        self.registers.f.insert(Flags::Subtraction);
         // HalfCarry is set if the lower 4 bits are 0, meaning we needed a bit from the upper 4 bits
-        let half_carry = (value & 0b1111) == 0;
-        flags.set(Flags::HalfCarry, half_carry);
-        self.debug_context
-            .push(format!("H' = {}", half_carry as u8));
+        self.set_flag(Flags::HalfCarry, (value & 0b1111) == 0);
         new_value
     }
 
     fn rotate_left_through_carry(&mut self, value: u8, set_zero: bool) -> u8 {
         let carry = self.registers.f.contains(Flags::Carry) as u8;
         let new_value = value << 1 | carry;
-        let flags = &mut self.registers.f;
 
-        flags.set(Flags::Zero, new_value == 0 && set_zero);
-        self.debug_context
-            .push(format!("Z' = {}", (new_value == 0 && set_zero) as u8));
+        self.set_flag(Flags::Zero, new_value == 0 && set_zero);
 
-        flags.remove(make_bitflags!(Flags::{Subtraction | HalfCarry}));
+        self.registers
+            .f
+            .remove(make_bitflags!(Flags::{Subtraction | HalfCarry}));
 
         self.debug_context.push(format!("C = {}", carry));
-        flags.set(Flags::Carry, value >> 7 == 1);
-        self.debug_context
-            .push(format!("C' = {}", (value >> 7 == 1) as u8));
+        self.set_flag(Flags::Carry, value >> 7 == 1);
 
         new_value
+    }
+
+    fn set_flag(&mut self, flag: Flags, cond: bool) {
+        self.debug_context.push(self.registers.set_flag(flag, cond));
     }
 }
 
