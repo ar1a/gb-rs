@@ -255,9 +255,15 @@ impl Cpu {
                 self.relative_jump(should_jump, relative)
             }
             Instruction::Inc(register) => {
-                let value = self.inc(self.match_register(register));
-                self.write_register(register, value);
-                eprintln!("  INC {:?}", register);
+                let value = self.match_register(register);
+                self.debug_context
+                    .push(format!("{} = {:02X}", register, value));
+                let new_value = self.inc(value);
+                self.debug_context
+                    .insert(1, format!("{}' = {:02X}", register, new_value));
+                self.write_register(register, new_value);
+
+                self.print_debug(&format!("INC {}", register), &self.format_context());
                 self.pc.wrapping_add(1)
             }
             Instruction::Inc16(register) => {
@@ -510,9 +516,14 @@ impl Cpu {
         let new_value = value.wrapping_add(1);
         let flags = &mut self.registers.f;
         flags.set(Flags::Zero, new_value == 0);
+        self.debug_context
+            .push(format!("Z' = {}", (new_value == 0) as u8));
         flags.remove(Flags::Subtraction);
         // HalfCarry is set if the lower 4 bits added together don't fit in the lower 4 bits
-        flags.set(Flags::HalfCarry, (value & 0b1111) + 1 > 0b1111);
+        let half_carry = (value & 0b1111) + 1 > 0b1111;
+        flags.set(Flags::HalfCarry, half_carry);
+        self.debug_context
+            .push(format!("H' = {}", half_carry as u8));
         new_value
     }
 
