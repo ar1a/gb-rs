@@ -267,9 +267,16 @@ impl Cpu {
                 self.pc.wrapping_add(1)
             }
             Instruction::Inc16(register) => {
-                let value = self.match_register16(register).wrapping_add(1);
-                self.write_register16(register, value);
-                eprintln!("  INC {:?}", register);
+                let value = self.match_register16(register);
+                let new_value = value.wrapping_add(1);
+                self.write_register16(register, new_value);
+                self.print_debug(
+                    &format!("INC {}", register),
+                    &format!(
+                        "{} = {:02X}, {}' = {:02X}",
+                        register, value, register, new_value
+                    ),
+                );
                 self.pc.wrapping_add(1)
             }
             Instruction::Dec(register) => {
