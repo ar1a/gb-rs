@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-use std::fmt::{LowerHex, UpperHex};
 
 use enumflags2::make_bitflags;
 use memorybus::*;
@@ -215,14 +214,16 @@ impl Cpu {
                 }
                 Alu::Cp => {
                     let value = match source {
-                        RegisterOrImmediate::Register(register) => self.match_register(register),
+                        RegisterOrImmediate::Register(register) => {
+                            let value = self.match_register(register);
+                            self.debug_context
+                                .push(format!("{} = {:02X}", register, value));
+                            value
+                        }
                         RegisterOrImmediate::Immediate(value) => value,
                     };
                     self.cp(value);
-                    eprintln!(
-                        "  CP {:?} {:#02x} - {:#02x} == {:?}",
-                        source, self.registers.a, value, self.registers.f
-                    );
+                    self.print_debug(&format!("CP {}", source), &self.format_context());
 
                     match source {
                         RegisterOrImmediate::Immediate(_) => self.pc.wrapping_add(2),
@@ -470,13 +471,21 @@ impl Cpu {
 
     fn cp(&mut self, value: u8) {
         let flags = &mut self.registers.f;
-        flags.set(Flags::Zero, self.registers.a == value);
+
+        let zero = self.registers.a == value;
+        flags.set(Flags::Zero, zero);
+        self.debug_context.push(format!("Z' = {}", zero as u8));
+
         flags.insert(Flags::Subtraction);
-        flags.set(
-            Flags::HalfCarry,
-            (self.registers.a & 0b1111) < (value & 0b1111),
-        );
-        flags.set(Flags::Carry, self.registers.a < value);
+
+        let half_carry = (self.registers.a & 0b1111) < (value & 0b1111);
+        flags.set(Flags::HalfCarry, half_carry);
+        self.debug_context
+            .push(format!("H' = {}", half_carry as u8));
+
+        let carry = self.registers.a < value;
+        flags.set(Flags::Carry, carry);
+        self.debug_context.push(format!("C' = {}", carry as u8));
     }
 
     fn bit(&mut self, mask: u8, value: u8) {
