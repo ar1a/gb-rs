@@ -232,15 +232,12 @@ impl Cpu {
             Instruction::Bit(bit, source) => {
                 let value = self.match_register(source);
                 let mask = 1 << bit;
+                self.debug_context
+                    .push(format!("{} = {:02x}", source, value));
+
                 self.bit(mask, value);
-                eprintln!(
-                    "  {:?} {:#2x} (0b{:0>8b}) & 0b{:0>8b} = {}",
-                    source,
-                    value,
-                    value,
-                    mask,
-                    !self.registers.f.contains(Flags::Zero)
-                );
+
+                self.print_debug(&format!("BIT {}, {}", bit, source), &self.format_context());
                 self.pc.wrapping_add(2)
             }
             Instruction::JR(condition, relative) => {
@@ -455,7 +452,9 @@ impl Cpu {
 
     fn bit(&mut self, mask: u8, value: u8) {
         let flags = &mut self.registers.f;
-        flags.set(Flags::Zero, value & mask == 0);
+        let zero = value & mask == 0;
+        flags.set(Flags::Zero, zero);
+        self.debug_context.push(format!("Z = {}", zero as u8));
         flags.remove(Flags::Subtraction);
         flags.insert(Flags::HalfCarry);
     }
