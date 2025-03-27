@@ -89,13 +89,18 @@ pub enum LoadByteDecTarget {
     HL,
 }
 
-#[derive(Debug, FromPrimitive, Clone, Copy)]
+#[derive(Debug, FromPrimitive, Clone, Copy, Display)]
 pub enum JumpTest {
+    #[display("NZ")]
     NotZero,
+    #[display("Z")]
     Zero,
+    #[display("NC")]
     NotCarry,
+    #[display("C")]
     Carry,
     // Not possible in DGM using FromPrimitive
+    #[display("1")]
     Always,
 }
 

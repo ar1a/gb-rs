@@ -1,4 +1,6 @@
 #![allow(dead_code)]
+use std::fmt::{LowerHex, UpperHex};
+
 use enumflags2::make_bitflags;
 use memorybus::*;
 use registers::*;
@@ -233,7 +235,7 @@ impl Cpu {
                 let value = self.match_register(source);
                 let mask = 1 << bit;
                 self.debug_context
-                    .push(format!("{} = {:02x}", source, value));
+                    .push(format!("{} = {:02X}", source, value));
 
                 self.bit(mask, value);
 
@@ -242,10 +244,13 @@ impl Cpu {
             }
             Instruction::JR(condition, relative) => {
                 let should_jump = self.match_jump_condition(condition);
-                eprintln!(
-                    "  relative jump of {} if {:?} (will jump: {})",
-                    relative, condition, should_jump
+
+                let target_address = self.pc.wrapping_add(2).wrapping_add_signed(relative as i16);
+                self.print_debug(
+                    &format!("JR {}, {:04X}", condition, target_address),
+                    &self.format_context(),
                 );
+
                 self.relative_jump(should_jump, relative)
             }
             Instruction::Inc(register) => {
@@ -370,12 +375,36 @@ impl Cpu {
         };
     }
 
-    fn match_jump_condition(&self, condition: JumpTest) -> bool {
+    fn match_jump_condition(&mut self, condition: JumpTest) -> bool {
         match condition {
-            JumpTest::NotZero => !self.registers.f.contains(Flags::Zero),
-            JumpTest::Zero => self.registers.f.contains(Flags::Zero),
-            JumpTest::NotCarry => !self.registers.f.contains(Flags::Carry),
-            JumpTest::Carry => self.registers.f.contains(Flags::Carry),
+            JumpTest::NotZero => {
+                self.debug_context.push(format!(
+                    "Z = {}",
+                    self.registers.f.contains(Flags::Zero) as u8
+                ));
+                !self.registers.f.contains(Flags::Zero)
+            }
+            JumpTest::Zero => {
+                self.debug_context.push(format!(
+                    "Z = {}",
+                    self.registers.f.contains(Flags::Zero) as u8
+                ));
+                self.registers.f.contains(Flags::Zero)
+            }
+            JumpTest::NotCarry => {
+                self.debug_context.push(format!(
+                    "C = {}",
+                    self.registers.f.contains(Flags::Carry) as u8
+                ));
+                !self.registers.f.contains(Flags::Carry)
+            }
+            JumpTest::Carry => {
+                self.debug_context.push(format!(
+                    "C = {}",
+                    self.registers.f.contains(Flags::Carry) as u8
+                ));
+                self.registers.f.contains(Flags::Carry)
+            }
             JumpTest::Always => true,
         }
     }
@@ -434,7 +463,7 @@ impl Cpu {
         let flags = &mut self.registers.f;
         let zero = new_value == 0;
         flags.set(Flags::Zero, zero);
-        self.debug_context.push(format!("Z = {}", zero as u8));
+        self.debug_context.push(format!("Z' = {}", zero as u8));
         flags.remove(make_bitflags!(Flags::{Subtraction | Carry | HalfCarry}));
         new_value
     }
@@ -454,7 +483,7 @@ impl Cpu {
         let flags = &mut self.registers.f;
         let zero = value & mask == 0;
         flags.set(Flags::Zero, zero);
-        self.debug_context.push(format!("Z = {}", zero as u8));
+        self.debug_context.push(format!("Z' = {}", zero as u8));
         flags.remove(Flags::Subtraction);
         flags.insert(Flags::HalfCarry);
     }
