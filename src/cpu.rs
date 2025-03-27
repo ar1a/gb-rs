@@ -248,7 +248,7 @@ impl Cpu {
 
                 let target_address = self.pc.wrapping_add(2).wrapping_add_signed(relative as i16);
                 self.print_debug(
-                    &format!("JR {}, {:04X}", condition, target_address),
+                    &format!("JR {} {:04X}", condition, target_address),
                     &self.format_context(),
                 );
 
@@ -308,15 +308,20 @@ impl Cpu {
             }
             Instruction::Call(condition, address) => {
                 let should_jump = self.match_jump_condition(condition);
-                eprintln!(
-                    "  call to {:#04x} if {:?} (will jump: {})",
-                    address, condition, should_jump
+                let pc = self.call(should_jump, address);
+
+                self.print_debug(
+                    &format!("CALL {} {:04X}", condition, address),
+                    &self.format_context(),
                 );
-                self.call(should_jump, address)
+                pc
             }
             Instruction::Ret => {
-                eprintln!("  RET to {:#04x}", self.bus.read_word(self.sp));
-                self.retn(true)
+                let address = self.bus.read_word(self.sp);
+                self.debug_context.push(format!("(SP) = {:04X}", address));
+                let pc = self.retn(true);
+                self.print_debug("RET", &self.format_context());
+                pc
             }
             Instruction::Push(register) => {
                 let value = match register {
@@ -439,18 +444,22 @@ impl Cpu {
     }
 
     fn push(&mut self, value: u16) {
+        self.debug_context.push(format!("SP = {:04X}", self.sp));
         self.sp = self.sp.wrapping_sub(1);
         self.bus.write_byte(self.sp, ((value & 0xFF00) >> 8) as u8);
 
         self.sp = self.sp.wrapping_sub(1);
         self.bus.write_byte(self.sp, (value & 0xFF) as u8);
+        self.debug_context.push(format!("SP' = {:04X}", self.sp));
     }
 
     fn pop(&mut self) -> u16 {
         // BUG: If the stack pointer would wrap in the middle of this read, i think this will have
         // incorrect behaviour
         let word = self.bus.read_word(self.sp);
+        self.debug_context.push(format!("SP = {:04X}", self.sp));
         self.sp = self.sp.wrapping_add(2);
+        self.debug_context.push(format!("SP' = {:04X}", self.sp));
         word
     }
 
