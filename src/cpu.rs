@@ -352,9 +352,13 @@ impl Cpu {
             Instruction::Rot(rot, register) => match rot {
                 Rot::Rl => {
                     let value = self.match_register(register);
-                    eprintln!("  RL {:?}", register);
+                    self.debug_context
+                        .push(format!("{} = {:02X}", register, value));
                     let new_value = self.rotate_left_through_carry(value, true);
                     self.write_register(register, new_value);
+                    self.debug_context
+                        .insert(1, format!("{}' = {:02X}", register, new_value));
+                    self.print_debug(&format!("RL {}", register), &self.format_context());
 
                     self.pc.wrapping_add(2)
                 }
@@ -581,9 +585,17 @@ impl Cpu {
         let carry = self.registers.f.contains(Flags::Carry) as u8;
         let new_value = value << 1 | carry;
         let flags = &mut self.registers.f;
+
         flags.set(Flags::Zero, new_value == 0 && set_zero);
+        self.debug_context
+            .push(format!("Z' = {}", (new_value == 0 && set_zero) as u8));
+
         flags.remove(make_bitflags!(Flags::{Subtraction | HalfCarry}));
+
+        self.debug_context.push(format!("C = {}", carry));
         flags.set(Flags::Carry, value >> 7 == 1);
+        self.debug_context
+            .push(format!("C' = {}", (value >> 7 == 1) as u8));
 
         new_value
     }
