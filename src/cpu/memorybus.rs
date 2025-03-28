@@ -9,9 +9,9 @@ pub const HRAM_END: usize = 0xFFFE;
 pub const HRAM_SIZE: usize = HRAM_END - HRAM_BEGIN + 1;
 
 #[derive(Debug)]
-pub struct MemoryBus {
+pub(crate) struct MemoryBus {
     // FIXME: separate into memory segments
-    memory: Box<[u8]>,
+    memory: [u8; 0xFFFF],
     gpu: Gpu,
 
     // TODO: Implement io as a struct
@@ -21,7 +21,7 @@ pub struct MemoryBus {
 impl Default for MemoryBus {
     fn default() -> Self {
         Self {
-            memory: vec![0; 0xFFFF].into_boxed_slice(),
+            memory: [0; 0xFFFF],
             gpu: Gpu::default(),
 
             io: [0; IO_SIZE],

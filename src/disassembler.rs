@@ -8,7 +8,6 @@ use num_traits::FromPrimitive as _;
 
 pub mod instruction;
 
-#[allow(clippy::many_single_char_names, clippy::too_many_lines)]
 pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
     // based on <https://gb-archive.github.io/salvage/decoding_gbz80_opcodes/Decoding%20Gamboy%20Z80%20Opcodes.html>
     let (i, (x, y, z)) = bits::bits::<_, (u8, u8, u8), Error<_>, _, _>((
