@@ -3,22 +3,22 @@ use parse_display::Display;
 
 /// Base registers
 #[derive(Debug, Default)]
-pub(super) struct Registers {
-    pub(super) a: u8,
-    pub(super) b: u8,
-    pub(super) c: u8,
-    pub(super) d: u8,
-    pub(super) e: u8,
-    pub(super) h: u8,
-    pub(super) l: u8,
+pub struct Registers {
+    pub a: u8,
+    pub b: u8,
+    pub c: u8,
+    pub d: u8,
+    pub e: u8,
+    pub h: u8,
+    pub l: u8,
 
-    pub(super) f: BitFlags<Flags>,
+    pub f: BitFlags<Flags>,
 }
 
 #[bitflags]
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Display)]
-pub(super) enum Flags {
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Display)]
+pub enum Flags {
     /// Set if the result of an operation is zero
     #[display("Z")]
     Zero = 0b1000_0000,
@@ -34,37 +34,37 @@ pub(super) enum Flags {
 }
 
 impl Registers {
-    pub(super) const fn bc(&self) -> u16 {
+    pub const fn bc(&self) -> u16 {
         u16::from_le_bytes([self.c, self.b])
     }
-    pub(super) const fn set_bc(&mut self, value: u16) {
+    pub const fn set_bc(&mut self, value: u16) {
         let [c, b] = value.to_le_bytes();
         self.b = b;
         self.c = c;
     }
 
-    pub(super) fn af(&self) -> u16 {
+    pub fn af(&self) -> u16 {
         u16::from_le_bytes([self.f.bits(), self.a])
     }
-    pub(super) fn set_af(&mut self, value: u16) {
+    pub fn set_af(&mut self, value: u16) {
         let [f, a] = value.to_le_bytes();
         self.a = a;
         self.f = Flags::from_bits(f).unwrap();
     }
 
-    pub(super) const fn de(&self) -> u16 {
+    pub const fn de(&self) -> u16 {
         u16::from_le_bytes([self.e, self.d])
     }
-    pub(super) const fn set_de(&mut self, value: u16) {
+    pub const fn set_de(&mut self, value: u16) {
         let [e, d] = value.to_le_bytes();
         self.d = d;
         self.e = e;
     }
 
-    pub(super) const fn hl(&self) -> u16 {
+    pub const fn hl(&self) -> u16 {
         u16::from_le_bytes([self.l, self.h])
     }
-    pub(super) const fn set_hl(&mut self, value: u16) {
+    pub const fn set_hl(&mut self, value: u16) {
         let [l, h] = value.to_le_bytes();
         self.h = h;
         self.l = l;
