@@ -291,10 +291,11 @@ impl Cpu {
                 let new_value = self.dec(value);
                 self.write_register(register, new_value);
 
-                self.print_debug(
-                    &format!("DEC {register}"),
-                    &format!("{register} = {value:02X}, {register}' = {new_value:02X}"),
+                self.debug_context.insert(
+                    0,
+                    format!("{register} = {value:02X}, {register}' = {new_value:02X}"),
                 );
+                self.print_debug(&format!("DEC {register}"), &self.format_context());
                 self.pc.wrapping_add(1)
             }
             Instruction::Dec16(register) => {
@@ -540,8 +541,6 @@ impl Cpu {
     fn dec(&mut self, value: u8) -> u8 {
         let new_value = value.wrapping_sub(1);
         self.set_flag(Flags::Zero, new_value == 0);
-        self.debug_context
-            .push(format!("Z' = {}", u8::from(new_value == 0)));
         self.registers.f.insert(Flags::Subtraction);
         // HalfCarry is set if the lower 4 bits are 0, meaning we needed a bit from the upper 4 bits
         self.set_flag(Flags::HalfCarry, value.trailing_zeros() >= 4);
