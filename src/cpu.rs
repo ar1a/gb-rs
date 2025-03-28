@@ -580,7 +580,7 @@ mod test {
         let mut cpu = Cpu::default();
         cpu.bus.slice_mut()[0..256].copy_from_slice(boot_rom);
         cpu.bus.slice_mut()[256..32768].copy_from_slice(&test_rom[256..]);
-        loop {
+        while cpu.pc < 0x100 {
             cpu.step();
         }
     }
