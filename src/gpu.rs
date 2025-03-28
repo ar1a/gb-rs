@@ -17,11 +17,11 @@ impl Default for Gpu {
 }
 
 impl Gpu {
-    pub const fn read_vram(&self, index: usize) -> u8 {
+    pub fn read_vram(&self, index: usize) -> u8 {
         self.vram[index]
     }
 
-    pub const fn write_vram(&mut self, index: usize, value: u8) {
+    pub fn write_vram(&mut self, index: usize, value: u8) {
         self.vram[index] = value;
     }
 }

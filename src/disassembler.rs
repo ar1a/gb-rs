@@ -1,7 +1,4 @@
-use instruction::{
-    Alu, COrImmediate, Direction, Instruction, JumpTest, LoadIndirect, LoadType, LoadWordSource,
-    Register, Register16, Register16Alt, RegisterOrImmediate, Rot,
-};
+use instruction::*;
 use nom::{
     IResult, Parser, bits,
     error::Error,
@@ -188,7 +185,7 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                         let (i, address) = le_u16().parse(i)?;
                         (i, Instruction::Call(JumpTest::Always, address))
                     }
-                    _ => panic!("non-existent instruction: {unreachable}"),
+                    _ => panic!("non-existent instruction: {}", unreachable),
                 },
                 _ => unreachable!("{}", unreachable),
             },

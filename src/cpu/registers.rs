@@ -72,6 +72,6 @@ impl Registers {
 
     pub fn set_flag(&mut self, flag: Flags, condition: bool) -> String {
         self.f.set(flag, condition);
-        format!("{}' = {}", flag, u8::from(condition))
+        format!("{}' = {}", flag, condition as u8)
     }
 }
