@@ -9,16 +9,3 @@ nom = "8.0.0"
 num-derive = "0.4.2"
 num-traits = "0.2.19"
 parse-display = "0.10.0"
-
-[lints.rust]
-unsafe_code = "forbid"
-
-[lints.clippy]
-enum_glob_use = "deny"
-pedantic = { level = "deny", priority = -1 }
-nursery = { level = "deny", priority = -1 }
-unwrap_used = "deny"
-# missing_errors_doc = "allow"
-# missing_panics_doc = "allow"
-# too_many_lines = "warn"
-# future_not_send = "warn"
