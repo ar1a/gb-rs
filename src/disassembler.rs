@@ -172,6 +172,16 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                         Instruction::Ld(LoadType::LastByteAddress(COrImmediate::C, direction)),
                     )
                 }
+                5 => {
+                    let (i, address) = le_u16().parse(i)?;
+                    (
+                        i,
+                        Instruction::Ld(LoadType::Indirect(
+                            LoadIndirect::Immediate(address),
+                            Direction::FromA,
+                        )),
+                    )
+                }
                 _ => nyi(),
             },
             3 => match y {

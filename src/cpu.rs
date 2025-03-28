@@ -23,6 +23,7 @@ struct Cpu {
     pc: u16,
     sp: u16,
     bus: MemoryBus,
+
     debug_bytes_consumed: Vec<u8>,
     // Optionally used
     debug_context: Vec<String>,
@@ -100,22 +101,29 @@ impl Cpu {
                         LoadIndirect::BC => self.registers.bc(),
                         LoadIndirect::DE => self.registers.de(),
                         LoadIndirect::HLDec | LoadIndirect::HLInc => self.registers.hl(),
+                        LoadIndirect::Immediate(address) => address,
                     };
+                    if !matches!(indirect_type, LoadIndirect::Immediate(_)) {
+                        self.debug_context
+                            .push(format!("{indirect_type} = {address:04X}"));
+                    }
 
                     match direction {
                         Direction::IntoA => {
                             let value = self.bus.read_byte(address);
+                            self.debug_context.push(format!("A' = {value:02X}"));
                             self.print_debug(
-                                &format!("LD A, ({indirect_type:?})"),
-                                &format!("{indirect_type} = {address:04X}, A' = {value:02X}"),
+                                &format!("LD A, ({})", indirect_type.to_opcode_string()),
+                                &self.format_context(),
                             );
                             self.registers.a = value;
                         }
                         Direction::FromA => {
                             let value = self.registers.a;
+                            self.debug_context.push(format!("A = {value:02X}"));
                             self.print_debug(
-                                &format!("LD ({indirect_type:?}), A"),
-                                &format!("{indirect_type} = {address:04X}, A = {value:02X}"),
+                                &format!("LD ({}), A", indirect_type.to_opcode_string()),
+                                &self.format_context(),
                             );
                             self.bus.write_byte(address, value);
                         }
@@ -129,7 +137,10 @@ impl Cpu {
                     if adjust != 0 {
                         self.registers.set_hl(address.wrapping_add_signed(adjust));
                     }
-                    self.pc.wrapping_add(1)
+                    match indirect_type {
+                        LoadIndirect::Immediate(_) => self.pc.wrapping_add(3),
+                        _ => self.pc.wrapping_add(1),
+                    }
                 }
                 LoadType::Byte(register, source) => {
                     let value = match source {

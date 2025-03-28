@@ -65,6 +65,19 @@ pub enum LoadIndirect {
     HLDec,
     #[display("HL")]
     HLInc,
+    #[display("{0:02X}")]
+    Immediate(u16),
+}
+
+impl LoadIndirect {
+    pub fn to_opcode_string(self) -> String {
+        match self {
+            Self::HLDec => String::from("HL-"),
+            Self::HLInc => String::from("HL+"),
+            Self::Immediate(address) => format!("{address:04X}"),
+            _ => self.to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
