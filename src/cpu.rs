@@ -3,7 +3,6 @@
 use enumflags2::make_bitflags;
 use memorybus::MemoryBus;
 use registers::{Flags, Registers};
-use std::fmt::Write as _;
 
 use crate::disassembler::{
     instruction::{
@@ -77,19 +76,16 @@ impl Cpu {
 
     fn print_debug(&self, opcode: &str, context: &str) {
         eprint!("{:04X}", self.pc);
-        let bytes: String =
-            self.debug_bytes_consumed
-                .iter()
-                .fold(String::new(), |mut output, byte| {
-                    let _ = write!(output, "{byte:02X} ");
-                    output
-                });
+        let bytes: String = self
+            .debug_bytes_consumed
+            .iter()
+            .map(|byte| format!("{byte:02X} "))
+            .collect::<String>();
         eprint!(" {bytes:12}");
         eprint!("{opcode:32}");
         eprintln!(" ; {context}");
     }
 
-    #[allow(clippy::too_many_lines)]
     fn execute(&mut self, instruction: Instruction) -> u16 {
         #![allow(unreachable_patterns)]
         #![allow(clippy::infallible_destructuring_match)]
@@ -144,7 +140,7 @@ impl Cpu {
                     self.write_register(register, value);
                     match source {
                         RegisterOrImmediate::Immediate(_) => self.pc.wrapping_add(2),
-                        RegisterOrImmediate::Register(_) => self.pc.wrapping_add(1),
+                        _ => self.pc.wrapping_add(1),
                     }
                 }
                 LoadType::Word(register, source) => {
@@ -186,7 +182,7 @@ impl Cpu {
 
                     match source {
                         COrImmediate::Immediate(_) => self.pc.wrapping_add(2),
-                        COrImmediate::C => self.pc.wrapping_add(1),
+                        _ => self.pc.wrapping_add(1),
                     }
                 }
             },
@@ -208,7 +204,7 @@ impl Cpu {
                     self.print_debug(&format!("XOR {source}"), &self.format_context());
                     match source {
                         RegisterOrImmediate::Immediate(_) => self.pc.wrapping_add(2),
-                        RegisterOrImmediate::Register(_) => self.pc.wrapping_add(1),
+                        _ => self.pc.wrapping_add(1),
                     }
                 }
                 Alu::Cp => {
@@ -225,7 +221,7 @@ impl Cpu {
 
                     match source {
                         RegisterOrImmediate::Immediate(_) => self.pc.wrapping_add(2),
-                        RegisterOrImmediate::Register(_) => self.pc.wrapping_add(1),
+                        _ => self.pc.wrapping_add(1),
                     }
                 }
                 _ => todo!("alu opertion: {:?} {:?}", alu, source),
@@ -533,7 +529,7 @@ impl Cpu {
             .push(format!("Z' = {}", u8::from(new_value == 0)));
         self.registers.f.insert(Flags::Subtraction);
         // HalfCarry is set if the lower 4 bits are 0, meaning we needed a bit from the upper 4 bits
-        self.set_flag(Flags::HalfCarry, value.trailing_zeros() >= 4);
+        self.set_flag(Flags::HalfCarry, (value & 0b1111) == 0);
         new_value
     }
 

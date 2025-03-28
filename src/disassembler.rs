@@ -218,7 +218,7 @@ fn prefixed_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
     assert!(z < 8);
 
     let nyi = || todo!("prefixed instruction parse for X:{x} Z:{z} Y:{y}");
-    let _unreachable =
+    let unreachable =
         format!("impossible prefixed state! X:{x} Z:{z} Y:{y}\ndid you increment pc incorrectly?");
 
     Ok(match x {
