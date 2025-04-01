@@ -27,9 +27,11 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
     let q = y % 2;
 
     let nyi = || todo!("instruction parse for X:{x} Z:{z} Y:{y} P:{p} Q:{q}");
-    let unreachable = format!(
-        "impossible state! X:{x} Z:{z} Y:{y} P:{p} Q:{q}\ndid you increment pc incorrectly?"
-    );
+    let unreachable = || {
+        format!(
+            "impossible state! X:{x} Z:{z} Y:{y} P:{p} Q:{q}\ndid you increment pc incorrectly?"
+        )
+    };
 
     Ok(match x {
         0 => match z {
@@ -56,20 +58,20 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                     )
                 }
                 1 => nyi(),
-                _ => unreachable!("{}", unreachable),
+                _ => unreachable!("{}", unreachable()),
             },
             2 => {
                 let direction = match q {
                     0 => Direction::FromA,
                     1 => Direction::IntoA,
-                    _ => unreachable!("{}", unreachable),
+                    _ => unreachable!("{}", unreachable()),
                 };
                 let indirect_type = match p {
                     0 => LoadIndirect::BC,
                     1 => LoadIndirect::DE,
                     2 => LoadIndirect::HLInc,
                     3 => LoadIndirect::HLDec,
-                    _ => unreachable!("{}", unreachable),
+                    _ => unreachable!("{}", unreachable()),
                 };
                 (
                     i,
@@ -81,7 +83,7 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 match q {
                     0 => (i, Instruction::Inc16(reg)),
                     1 => (i, Instruction::Dec16(reg)),
-                    _ => unreachable!("{}", unreachable),
+                    _ => unreachable!("{}", unreachable()),
                 }
             }
             4 => {
@@ -107,7 +109,7 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 3 => (i, Instruction::Rra),
                 _ => nyi(),
             },
-            _ => unreachable!("{}", unreachable),
+            _ => unreachable!("{}", unreachable()),
         },
         1 => match z {
             1..6 | 7 => {
@@ -123,7 +125,7 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 )
             }
             6 => nyi(),
-            _ => unreachable!("{}", unreachable),
+            _ => unreachable!("{}", unreachable()),
         },
         2 => {
             let reg = Register::from_u8(z).unwrap();
@@ -161,7 +163,7 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                     0 => (i, Instruction::Ret),
                     _ => nyi(),
                 },
-                _ => unreachable!("{}", unreachable),
+                _ => unreachable!("{}", unreachable()),
             },
             2 => match y {
                 4 | 6 => {
@@ -202,9 +204,9 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                         let (i, address) = le_u16().parse(i)?;
                         (i, Instruction::Call(JumpTest::Always, address))
                     }
-                    _ => panic!("non-existent instruction: {unreachable}"),
+                    _ => panic!("non-existent instruction: {}", unreachable()),
                 },
-                _ => unreachable!("{}", unreachable),
+                _ => unreachable!("{}", unreachable()),
             },
             6 => {
                 let alu = Alu::from_u8(y).unwrap();
@@ -216,7 +218,7 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
             }
             _ => nyi(),
         },
-        _ => unreachable!("{}", unreachable),
+        _ => unreachable!("{}", unreachable()),
     })
 }
 

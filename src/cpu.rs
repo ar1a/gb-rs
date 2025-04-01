@@ -70,6 +70,7 @@ impl Cpu {
         )
     }
 
+    #[cfg(debug_assertions)]
     fn format_context(&self) -> String {
         self.debug_context
             .iter()
@@ -78,7 +79,12 @@ impl Cpu {
             .collect::<Vec<_>>()
             .join(", ")
     }
+    #[cfg(not(debug_assertions))]
+    fn format_context(&self) -> String {
+        String::new()
+    }
 
+    #[cfg(debug_assertions)]
     fn print_debug(&self, opcode: &str, context: &str) {
         let bytes: String =
             self.debug_bytes_consumed
@@ -88,6 +94,16 @@ impl Cpu {
                     output
                 });
         trace!("{:04X} {bytes:12} {opcode:32} ; {context}", self.pc);
+    }
+    #[cfg(not(debug_assertions))]
+    fn print_debug(&self, opcode: &str, context: &str) {}
+    #[cfg(debug_assertions)]
+    fn push_debug_context(&mut self, ctx: String) {
+        self.debug_context.push(ctx);
+    }
+    #[cfg(not(debug_assertions))]
+    fn push_debug_context(&mut self, ctx: String) {
+        self.debug_context.push("".to_string());
     }
 
     #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
@@ -104,14 +120,13 @@ impl Cpu {
                         LoadIndirect::Immediate(address) => address,
                     };
                     if !matches!(indirect_type, LoadIndirect::Immediate(_)) {
-                        self.debug_context
-                            .push(format!("{indirect_type} = {address:04X}"));
+                        self.push_debug_context(format!("{indirect_type} = {address:04X}"));
                     }
 
                     match direction {
                         Direction::IntoA => {
                             let value = self.bus.read_byte(address);
-                            self.debug_context.push(format!("A' = {value:02X}"));
+                            self.push_debug_context(format!("A' = {value:02X}"));
                             self.print_debug(
                                 &format!("LD A, ({})", indirect_type.to_opcode_string()),
                                 &self.format_context(),
@@ -120,7 +135,7 @@ impl Cpu {
                         }
                         Direction::FromA => {
                             let value = self.registers.a;
-                            self.debug_context.push(format!("A = {value:02X}"));
+                            self.push_debug_context(format!("A = {value:02X}"));
                             self.print_debug(
                                 &format!("LD ({}), A", indirect_type.to_opcode_string()),
                                 &self.format_context(),
@@ -147,7 +162,7 @@ impl Cpu {
                         RegisterOrImmediate::Immediate(x) => x,
                         RegisterOrImmediate::Register(reg) => {
                             let value = self.match_register(reg);
-                            self.debug_context.push(format!("{reg} = {value:02X}"));
+                            self.push_debug_context(format!("{reg} = {value:02X}"));
                             value
                         }
                     };
@@ -171,8 +186,7 @@ impl Cpu {
                 LoadType::LastByteAddress(source, direction) => {
                     let offset = match source {
                         COrImmediate::C => {
-                            self.debug_context
-                                .push(format!("C = {:02X}", self.registers.c));
+                            self.push_debug_context(format!("C = {:02X}", self.registers.c));
                             self.registers.c
                         }
                         COrImmediate::Immediate(x) => x,
@@ -181,15 +195,13 @@ impl Cpu {
 
                     match direction {
                         Direction::FromA => {
-                            self.debug_context
-                                .push(format!("A = {:02X}", self.registers.a));
+                            self.push_debug_context(format!("A = {:02X}", self.registers.a));
                             self.print_debug(&format!("LDH ({source}), A"), &self.format_context());
                             self.bus.write_byte(address, self.registers.a);
                         }
                         Direction::IntoA => {
                             let value = self.bus.read_byte(address);
-                            self.debug_context
-                                .push(format!("({address:04X}) = {value:02X}"));
+                            self.push_debug_context(format!("({address:04X}) = {value:02X}"));
                             self.print_debug(&format!("LDH A, ({source})"), &self.format_context());
                             self.registers.a = self.bus.read_byte(address);
                         }
@@ -207,14 +219,13 @@ impl Cpu {
                         RegisterOrImmediate::Register(register) => {
                             let value = self.match_register(register);
                             if !matches!(register, Register::A) {
-                                self.debug_context.push(format!("{register} = {value:02X}"));
+                                self.push_debug_context(format!("{register} = {value:02X}"));
                             }
                             value
                         }
                         RegisterOrImmediate::Immediate(value) => value,
                     };
-                    self.debug_context
-                        .push(format!("A = {:02X}", self.registers.a));
+                    self.push_debug_context(format!("A = {:02X}", self.registers.a));
                     self.registers.a = self.xor(value);
                     self.print_debug(&format!("XOR {source}"), &self.format_context());
                     match source {
@@ -229,7 +240,7 @@ impl Cpu {
                     let value = match source {
                         RegisterOrImmediate::Register(register) => {
                             let value = self.match_register(register);
-                            self.debug_context.push(format!("{register} = {value:02X}"));
+                            self.push_debug_context(format!("{register} = {value:02X}"));
                             value
                         }
                         RegisterOrImmediate::Immediate(value) => value,
@@ -250,7 +261,7 @@ impl Cpu {
             Instruction::Bit(bit, source) => {
                 let value = self.match_register(source);
                 let mask = 1 << bit;
-                self.debug_context.push(format!("{source} = {value:02X}"));
+                self.push_debug_context(format!("{source} = {value:02X}"));
 
                 self.bit(mask, value);
 
@@ -276,7 +287,7 @@ impl Cpu {
             }
             Instruction::Inc(register) => {
                 let value = self.match_register(register);
-                self.debug_context.push(format!("{register} = {value:02X}"));
+                self.push_debug_context(format!("{register} = {value:02X}"));
                 let new_value = self.inc(value);
                 self.debug_context
                     .insert(1, format!("{register}' = {new_value:02X}"));
@@ -335,7 +346,7 @@ impl Cpu {
             }
             Instruction::Ret => {
                 let address = self.bus.read_word(self.sp);
-                self.debug_context.push(format!("(SP) = {address:04X}"));
+                self.push_debug_context(format!("(SP) = {address:04X}"));
                 let pc = self.retn(true);
                 self.print_debug("RET", &self.format_context());
                 // TODO: conditional rets should use `retn`s returned cycles
@@ -348,7 +359,7 @@ impl Cpu {
                     Register16Alt::HL => self.registers.hl(),
                     Register16Alt::AF => self.registers.af(),
                 };
-                self.debug_context.push(format!("{register} = {value:04X}"));
+                self.push_debug_context(format!("{register} = {value:04X}"));
                 self.push(value);
                 self.print_debug(&format!("PUSH {register}"), &self.format_context());
                 (self.pc.wrapping_add(1), 16)
@@ -369,7 +380,7 @@ impl Cpu {
             Instruction::Rot(rot, register) => match rot {
                 Rot::Rl => {
                     let value = self.match_register(register);
-                    self.debug_context.push(format!("{register} = {value:02X}"));
+                    self.push_debug_context(format!("{register} = {value:02X}"));
                     let new_value = self.rotate_left_through_carry(value, true);
                     self.write_register(register, new_value);
                     self.debug_context
@@ -384,8 +395,7 @@ impl Cpu {
                 _ => todo!("unimplemented instruction: {:?}", instruction),
             },
             Instruction::Rla => {
-                self.debug_context
-                    .push(format!("A = {:02X}", self.registers.a));
+                self.push_debug_context(format!("A = {:02X}", self.registers.a));
                 self.registers.a = self.rotate_left_through_carry(self.registers.a, false);
                 self.debug_context
                     .insert(1, format!("A' = {:02X}", self.registers.a));
@@ -443,8 +453,7 @@ impl Cpu {
 
     fn flags_contains(&mut self, flag: Flags) -> bool {
         let contains = self.registers.f.contains(flag);
-        self.debug_context
-            .push(format!("{} = {}", flag, u8::from(contains)));
+        self.push_debug_context(format!("{} = {}", flag, u8::from(contains)));
         contains
     }
 
@@ -459,22 +468,22 @@ impl Cpu {
     }
 
     fn push(&mut self, value: u16) {
-        self.debug_context.push(format!("SP = {:04X}", self.sp));
+        self.push_debug_context(format!("SP = {:04X}", self.sp));
         self.sp = self.sp.wrapping_sub(1);
         self.bus.write_byte(self.sp, ((value & 0xFF00) >> 8) as u8);
 
         self.sp = self.sp.wrapping_sub(1);
         self.bus.write_byte(self.sp, (value & 0xFF) as u8);
-        self.debug_context.push(format!("SP' = {:04X}", self.sp));
+        self.push_debug_context(format!("SP' = {:04X}", self.sp));
     }
 
     fn pop(&mut self) -> u16 {
         // BUG: If the stack pointer would wrap in the middle of this read, i think this will have
         // incorrect behaviour
         let word = self.bus.read_word(self.sp);
-        self.debug_context.push(format!("SP = {:04X}", self.sp));
+        self.push_debug_context(format!("SP = {:04X}", self.sp));
         self.sp = self.sp.wrapping_add(2);
-        self.debug_context.push(format!("SP' = {:04X}", self.sp));
+        self.push_debug_context(format!("SP' = {:04X}", self.sp));
         word
     }
 
@@ -511,7 +520,7 @@ impl Cpu {
 
     fn xor(&mut self, value: u8) -> u8 {
         let new_value = self.registers.a ^ value;
-        self.debug_context.push(format!("A' = {new_value:02X}"));
+        self.push_debug_context(format!("A' = {new_value:02X}"));
         self.set_flag(Flags::Zero, new_value == 0);
         self.registers
             .f
@@ -576,14 +585,15 @@ impl Cpu {
             .f
             .remove(make_bitflags!(Flags::{Subtraction | HalfCarry}));
 
-        self.debug_context.push(format!("C = {carry}"));
+        self.push_debug_context(format!("C = {carry}"));
         self.set_flag(Flags::Carry, value >> 7 == 1);
 
         new_value
     }
 
     fn set_flag(&mut self, flag: Flags, cond: bool) {
-        self.debug_context.push(self.registers.set_flag(flag, cond));
+        let ctx = self.registers.set_flag(flag, cond);
+        self.push_debug_context(ctx);
     }
 }
 

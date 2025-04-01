@@ -27,7 +27,7 @@ pub struct Gpu {
     tile_set: [Tile; 384],
     pub buffer: Box<[u8; WIDTH * HEIGHT * 3]>,
     cycles: u16,
-    line: u8,
+    pub line: u8,
     pub mode: Mode,
 }
 
