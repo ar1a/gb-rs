@@ -12,7 +12,7 @@ pub const HRAM_SIZE: usize = HRAM_END - HRAM_BEGIN + 1;
 pub struct MemoryBus {
     // FIXME: separate into memory segments
     memory: Box<[u8]>,
-    gpu: Gpu,
+    pub gpu: Gpu,
 
     // TODO: Implement io as a struct
     io: [u8; IO_SIZE],

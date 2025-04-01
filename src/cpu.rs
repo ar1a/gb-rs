@@ -31,17 +31,19 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub fn step(&mut self) {
+    pub fn step(&mut self) -> u8 {
         self.debug_context.clear();
         let slice = self.bus.slice_from(self.pc);
         let (after, instruction) = parse_instruction(slice).unwrap();
         let bytes_consumed_len = slice.len() - after.len();
         self.debug_bytes_consumed
             .splice(.., slice[..bytes_consumed_len].iter().copied());
-        let next_pc = self.execute(instruction);
+        let (next_pc, cycles) = self.execute(instruction);
         // eprintln!("{}", self.format_state()); // TODO: Log to a file instead
 
+        self.bus.gpu.step(cycles);
         self.pc = next_pc;
+        0
     }
 
     fn format_state(&self) -> String {
@@ -88,8 +90,8 @@ impl Cpu {
         trace!("{:04X} {bytes:12} {opcode:32} ; {context}", self.pc);
     }
 
-    #[allow(clippy::too_many_lines)]
-    fn execute(&mut self, instruction: Instruction) -> u16 {
+    #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
+    fn execute(&mut self, instruction: Instruction) -> (u16, u8) {
         #![allow(unreachable_patterns)]
         #![allow(clippy::infallible_destructuring_match)]
         match instruction {
@@ -136,8 +138,8 @@ impl Cpu {
                         self.registers.set_hl(address.wrapping_add_signed(adjust));
                     }
                     match indirect_type {
-                        LoadIndirect::Immediate(_) => self.pc.wrapping_add(3),
-                        _ => self.pc.wrapping_add(1),
+                        LoadIndirect::Immediate(_) => (self.pc.wrapping_add(3), 16),
+                        _ => (self.pc.wrapping_add(1), 8),
                     }
                 }
                 LoadType::Byte(register, source) => {
@@ -152,8 +154,8 @@ impl Cpu {
                     self.print_debug(&format!("LD {register}, {source}"), &self.format_context());
                     self.write_register(register, value);
                     match source {
-                        RegisterOrImmediate::Immediate(_) => self.pc.wrapping_add(2),
-                        RegisterOrImmediate::Register(_) => self.pc.wrapping_add(1),
+                        RegisterOrImmediate::Immediate(_) => (self.pc.wrapping_add(2), 8),
+                        RegisterOrImmediate::Register(_) => (self.pc.wrapping_add(1), 4),
                     }
                 }
                 LoadType::Word(register, source) => {
@@ -163,7 +165,7 @@ impl Cpu {
                     self.write_register16(register, source_value);
                     self.print_debug(&format!("LD {register}, {source_value:02X}"), "");
                     match source {
-                        LoadWordSource::Immediate(_) => self.pc.wrapping_add(3),
+                        LoadWordSource::Immediate(_) => (self.pc.wrapping_add(3), 12),
                     }
                 }
                 LoadType::LastByteAddress(source, direction) => {
@@ -194,8 +196,8 @@ impl Cpu {
                     }
 
                     match source {
-                        COrImmediate::Immediate(_) => self.pc.wrapping_add(2),
-                        COrImmediate::C => self.pc.wrapping_add(1),
+                        COrImmediate::Immediate(_) => (self.pc.wrapping_add(2), 12),
+                        COrImmediate::C => (self.pc.wrapping_add(1), 8),
                     }
                 }
             },
@@ -216,8 +218,11 @@ impl Cpu {
                     self.registers.a = self.xor(value);
                     self.print_debug(&format!("XOR {source}"), &self.format_context());
                     match source {
-                        RegisterOrImmediate::Immediate(_) => self.pc.wrapping_add(2),
-                        RegisterOrImmediate::Register(_) => self.pc.wrapping_add(1),
+                        RegisterOrImmediate::Immediate(_) => (self.pc.wrapping_add(2), 8),
+                        RegisterOrImmediate::Register(Register::HLIndirect) => {
+                            (self.pc.wrapping_add(1), 8)
+                        }
+                        RegisterOrImmediate::Register(_) => (self.pc.wrapping_add(1), 4),
                     }
                 }
                 Alu::Cp => {
@@ -233,8 +238,11 @@ impl Cpu {
                     self.print_debug(&format!("CP {source}"), &self.format_context());
 
                     match source {
-                        RegisterOrImmediate::Immediate(_) => self.pc.wrapping_add(2),
-                        RegisterOrImmediate::Register(_) => self.pc.wrapping_add(1),
+                        RegisterOrImmediate::Immediate(_) => (self.pc.wrapping_add(2), 8),
+                        RegisterOrImmediate::Register(Register::HLIndirect) => {
+                            (self.pc.wrapping_add(1), 8)
+                        }
+                        RegisterOrImmediate::Register(_) => (self.pc.wrapping_add(1), 4),
                     }
                 }
                 _ => todo!("alu opertion: {:?} {:?}", alu, source),
@@ -247,7 +255,10 @@ impl Cpu {
                 self.bit(mask, value);
 
                 self.print_debug(&format!("BIT {bit}, {source}"), &self.format_context());
-                self.pc.wrapping_add(2)
+                match source {
+                    Register::HLIndirect => (self.pc.wrapping_add(2), 12),
+                    _ => (self.pc.wrapping_add(2), 8),
+                }
             }
             Instruction::JR(condition, relative) => {
                 let should_jump = self.match_jump_condition(condition);
@@ -272,7 +283,10 @@ impl Cpu {
                 self.write_register(register, new_value);
 
                 self.print_debug(&format!("INC {register}"), &self.format_context());
-                self.pc.wrapping_add(1)
+                match register {
+                    Register::HLIndirect => (self.pc.wrapping_add(1), 12),
+                    _ => (self.pc.wrapping_add(1), 4),
+                }
             }
             Instruction::Inc16(register) => {
                 let value = self.match_register16(register);
@@ -282,7 +296,7 @@ impl Cpu {
                     &format!("INC {register}"),
                     &format!("{register} = {value:02X}, {register}' = {new_value:02X}"),
                 );
-                self.pc.wrapping_add(1)
+                (self.pc.wrapping_add(1), 8)
             }
             Instruction::Dec(register) => {
                 let value = self.match_register(register);
@@ -294,7 +308,10 @@ impl Cpu {
                     format!("{register} = {value:02X}, {register}' = {new_value:02X}"),
                 );
                 self.print_debug(&format!("DEC {register}"), &self.format_context());
-                self.pc.wrapping_add(1)
+                match register {
+                    Register::HLIndirect => (self.pc.wrapping_add(1), 12),
+                    _ => (self.pc.wrapping_add(1), 4),
+                }
             }
             Instruction::Dec16(register) => {
                 let value = self.match_register16(register);
@@ -304,7 +321,7 @@ impl Cpu {
                     &format!("DEC {register}"),
                     &format!("{register} = {value:04X}, {register}' = {new_value:04X}"),
                 );
-                self.pc.wrapping_add(1)
+                (self.pc.wrapping_add(1), 8)
             }
             Instruction::Call(condition, address) => {
                 let should_jump = self.match_jump_condition(condition);
@@ -321,7 +338,8 @@ impl Cpu {
                 self.debug_context.push(format!("(SP) = {address:04X}"));
                 let pc = self.retn(true);
                 self.print_debug("RET", &self.format_context());
-                pc
+                // TODO: conditional rets should use `retn`s returned cycles
+                (pc.0, 16)
             }
             Instruction::Push(register) => {
                 let value = match register {
@@ -333,7 +351,7 @@ impl Cpu {
                 self.debug_context.push(format!("{register} = {value:04X}"));
                 self.push(value);
                 self.print_debug(&format!("PUSH {register}"), &self.format_context());
-                self.pc.wrapping_add(1)
+                (self.pc.wrapping_add(1), 16)
             }
             Instruction::Pop(register) => {
                 let value = self.pop();
@@ -346,7 +364,7 @@ impl Cpu {
                     Register16Alt::HL => self.registers.set_hl(value),
                     Register16Alt::AF => self.registers.set_af(value),
                 }
-                self.pc.wrapping_add(1)
+                (self.pc.wrapping_add(1), 12)
             }
             Instruction::Rot(rot, register) => match rot {
                 Rot::Rl => {
@@ -358,7 +376,10 @@ impl Cpu {
                         .insert(1, format!("{register}' = {new_value:02X}"));
                     self.print_debug(&format!("RL {register}"), &self.format_context());
 
-                    self.pc.wrapping_add(2)
+                    match register {
+                        Register::HLIndirect => (self.pc.wrapping_add(2), 16),
+                        _ => (self.pc.wrapping_add(2), 8),
+                    }
                 }
                 _ => todo!("unimplemented instruction: {:?}", instruction),
             },
@@ -370,7 +391,7 @@ impl Cpu {
                     .insert(1, format!("A' = {:02X}", self.registers.a));
 
                 self.print_debug("RLA", &self.format_context());
-                self.pc.wrapping_add(1)
+                (self.pc.wrapping_add(1), 4)
             }
             _ => todo!("unimplemented instruction: {:?}", instruction),
         }
@@ -457,21 +478,21 @@ impl Cpu {
         word
     }
 
-    fn call(&mut self, should_jump: bool, address: u16) -> u16 {
+    fn call(&mut self, should_jump: bool, address: u16) -> (u16, u8) {
         let next_pc = self.pc.wrapping_add(3);
         if should_jump {
             self.push(next_pc);
-            address
+            (address, 24)
         } else {
-            next_pc
+            (next_pc, 12)
         }
     }
 
-    fn retn(&mut self, should_jump: bool) -> u16 {
+    fn retn(&mut self, should_jump: bool) -> (u16, u8) {
         if should_jump {
-            self.pop()
+            (self.pop(), 20)
         } else {
-            self.pc.wrapping_add(1)
+            (self.pc.wrapping_add(1), 8)
         }
     }
 
@@ -517,12 +538,12 @@ impl Cpu {
         self.registers.f.insert(Flags::HalfCarry);
     }
 
-    const fn relative_jump(&self, should_jump: bool, offset: i8) -> u16 {
+    const fn relative_jump(&self, should_jump: bool, offset: i8) -> (u16, u8) {
         let pc = self.pc.wrapping_add(2);
         if should_jump {
-            pc.wrapping_add_signed(offset as i16)
+            (pc.wrapping_add_signed(offset as i16), 12)
         } else {
-            pc
+            (pc, 8)
         }
     }
 
