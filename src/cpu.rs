@@ -17,12 +17,12 @@ pub mod memorybus;
 pub mod registers;
 
 #[derive(Debug, Default)]
-struct Cpu {
-    registers: Registers,
+pub struct Cpu {
+    pub registers: Registers,
     /// The Program Counter register
-    pc: u16,
-    sp: u16,
-    bus: MemoryBus,
+    pub pc: u16,
+    pub sp: u16,
+    pub bus: MemoryBus,
 
     debug_bytes_consumed: Vec<u8>,
     // Optionally used
@@ -30,7 +30,7 @@ struct Cpu {
 }
 
 impl Cpu {
-    fn step(&mut self) {
+    pub fn step(&mut self) {
         self.debug_context.clear();
         let slice = self.bus.slice_from(self.pc);
         let (after, instruction) = parse_instruction(slice).unwrap();
