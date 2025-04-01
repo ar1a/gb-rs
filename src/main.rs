@@ -4,14 +4,14 @@ use jane_eyre::eyre::{self, eyre};
 use minifb::{Key, Window, WindowOptions};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::cpu::Cpu;
+use crate::{
+    cpu::Cpu,
+    gpu::{HEIGHT, Mode, WIDTH},
+};
 
 mod cpu;
 mod disassembler;
 mod gpu;
-
-const WIDTH: usize = 160;
-const HEIGHT: usize = 144;
 
 const fn from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
     let (r, g, b) = (r as u32, g as u32, b as u32);
@@ -51,6 +51,14 @@ fn main() -> eyre::Result<()> {
         cpu.bus.slice_mut()[256..32768].copy_from_slice(&test_rom[256..]);
         while cpu.pc < 0x100 {
             cpu.step();
+            // HACK: this is doing a lot of copies, we only need to copy once
+            if cpu.bus.gpu.mode == Mode::HBlank {
+                let mut buffer = buffer.lock().unwrap();
+                buffer
+                    .iter_mut()
+                    .zip(cpu.bus.gpu.buffer.chunks_exact(3))
+                    .for_each(|(x, rgb)| *x = from_u8_rgb(rgb[0], rgb[1], rgb[2]));
+            }
         }
     });
 

@@ -43,7 +43,7 @@ impl Cpu {
 
         self.bus.gpu.step(cycles);
         self.pc = next_pc;
-        0
+        cycles
     }
 
     fn format_state(&self) -> String {

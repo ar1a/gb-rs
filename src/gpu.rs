@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use tracing::trace;
+
 use crate::gpu::tile::{Tile, empty_tile};
 
 pub const VRAM_BEGIN: usize = 0x8000;
@@ -26,7 +28,7 @@ pub struct Gpu {
     pub buffer: Box<[u8; WIDTH * HEIGHT * 3]>,
     cycles: u16,
     line: u8,
-    mode: Mode,
+    pub mode: Mode,
 }
 
 impl Default for Gpu {
@@ -52,7 +54,7 @@ impl Gpu {
             Mode::OamScan => {
                 if self.cycles >= 80 {
                     self.cycles %= 80;
-                    self.mode = Mode::OamScan;
+                    self.mode = Mode::Drawing;
                 }
             }
             Mode::Drawing => {
@@ -82,6 +84,8 @@ impl Gpu {
                 if self.line >= 154 {
                     self.mode = Mode::OamScan;
                     self.line = 0;
+                    // FIXME: only here for testing
+                    self.buffer.fill(0);
                 }
             }
         }
@@ -94,7 +98,15 @@ impl Gpu {
         self.vram[index] = value;
     }
 
-    fn render_line(&mut self) {}
+    fn render_line(&mut self) {
+        let mut line_offset = self.line as usize * WIDTH * 3;
+        for i in 0..WIDTH {
+            self.buffer[line_offset + i] = 255;
+            self.buffer[line_offset + i + 1] = 255;
+            self.buffer[line_offset + i + 2] = 255;
+            line_offset += 2;
+        }
+    }
 }
 
 #[cfg(test)]
