@@ -4,6 +4,7 @@ use enumflags2::make_bitflags;
 use memorybus::MemoryBus;
 use registers::{Flags, Registers};
 use std::fmt::Write as _;
+use tracing::trace;
 
 use crate::disassembler::{
     instruction::{
@@ -77,7 +78,6 @@ impl Cpu {
     }
 
     fn print_debug(&self, opcode: &str, context: &str) {
-        eprint!("{:04X}", self.pc);
         let bytes: String =
             self.debug_bytes_consumed
                 .iter()
@@ -85,9 +85,7 @@ impl Cpu {
                     let _ = write!(output, "{byte:02X} ");
                     output
                 });
-        eprint!(" {bytes:12}");
-        eprint!("{opcode:32}");
-        eprintln!(" ; {context}");
+        trace!("{:04X} {bytes:12} {opcode:32} ; {context}", self.pc);
     }
 
     #[allow(clippy::too_many_lines)]

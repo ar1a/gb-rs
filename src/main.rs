@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use jane_eyre::eyre::{self, eyre};
 use minifb::{Key, Window, WindowOptions};
+use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::cpu::Cpu;
 
@@ -19,6 +20,14 @@ const fn from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
 
 fn main() -> eyre::Result<()> {
     jane_eyre::install()?;
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer().with_writer(std::io::stderr))
+        .with(
+            EnvFilter::builder()
+                .with_default_directive("info".parse()?)
+                .from_env_lossy(),
+        )
+        .init();
     let buffer = Arc::new(Mutex::new(vec![from_u8_rgb(0, 127, 255); WIDTH * HEIGHT]));
     let gui_buffer = Arc::clone(&buffer);
     let gui_thread = std::thread::spawn(move || {
