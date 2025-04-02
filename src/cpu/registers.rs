@@ -72,6 +72,9 @@ impl Registers {
 
     pub fn set_flag(&mut self, flag: Flags, condition: bool) -> String {
         self.f.set(flag, condition);
-        format!("{}' = {}", flag, u8::from(condition))
+        #[cfg(debug_assertions)]
+        return format!("{}' = {}", flag, u8::from(condition));
+        #[cfg(not(debug_assertions))]
+        String::new()
     }
 }

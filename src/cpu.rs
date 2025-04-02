@@ -123,13 +123,16 @@ impl Cpu {
                         LoadIndirect::Immediate(address) => address,
                     };
                     if !matches!(indirect_type, LoadIndirect::Immediate(_)) {
+                        #[cfg(debug_assertions)]
                         self.push_debug_context(format!("{indirect_type} = {address:04X}"));
                     }
 
                     match direction {
                         Direction::IntoA => {
                             let value = self.bus.read_byte(address);
+                            #[cfg(debug_assertions)]
                             self.push_debug_context(format!("A' = {value:02X}"));
+                            #[cfg(debug_assertions)]
                             self.print_debug(
                                 &format!("LD A, ({})", indirect_type.to_opcode_string()),
                                 &self.format_context(),
@@ -138,7 +141,9 @@ impl Cpu {
                         }
                         Direction::FromA => {
                             let value = self.registers.a;
+                            #[cfg(debug_assertions)]
                             self.push_debug_context(format!("A = {value:02X}"));
+                            #[cfg(debug_assertions)]
                             self.print_debug(
                                 &format!("LD ({}), A", indirect_type.to_opcode_string()),
                                 &self.format_context(),
@@ -165,10 +170,12 @@ impl Cpu {
                         RegisterOrImmediate::Immediate(x) => x,
                         RegisterOrImmediate::Register(reg) => {
                             let value = self.match_register(reg);
+                            #[cfg(debug_assertions)]
                             self.push_debug_context(format!("{reg} = {value:02X}"));
                             value
                         }
                     };
+                    #[cfg(debug_assertions)]
                     self.print_debug(&format!("LD {register}, {source}"), &self.format_context());
                     self.write_register(register, value);
                     match source {
@@ -181,6 +188,7 @@ impl Cpu {
                         LoadWordSource::Immediate(x) => x,
                     };
                     self.write_register16(register, source_value);
+                    #[cfg(debug_assertions)]
                     self.print_debug(&format!("LD {register}, {source_value:02X}"), "");
                     match source {
                         LoadWordSource::Immediate(_) => (self.pc.wrapping_add(3), 12),
@@ -189,6 +197,7 @@ impl Cpu {
                 LoadType::LastByteAddress(source, direction) => {
                     let offset = match source {
                         COrImmediate::C => {
+                            #[cfg(debug_assertions)]
                             self.push_debug_context(format!("C = {:02X}", self.registers.c));
                             self.registers.c
                         }
@@ -198,13 +207,17 @@ impl Cpu {
 
                     match direction {
                         Direction::FromA => {
+                            #[cfg(debug_assertions)]
                             self.push_debug_context(format!("A = {:02X}", self.registers.a));
+                            #[cfg(debug_assertions)]
                             self.print_debug(&format!("LDH ({source}), A"), &self.format_context());
                             self.bus.write_byte(address, self.registers.a);
                         }
                         Direction::IntoA => {
                             let value = self.bus.read_byte(address);
+                            #[cfg(debug_assertions)]
                             self.push_debug_context(format!("({address:04X}) = {value:02X}"));
+                            #[cfg(debug_assertions)]
                             self.print_debug(&format!("LDH A, ({source})"), &self.format_context());
                             self.registers.a = self.bus.read_byte(address);
                         }
@@ -222,14 +235,17 @@ impl Cpu {
                         RegisterOrImmediate::Register(register) => {
                             let value = self.match_register(register);
                             if !matches!(register, Register::A) {
+                                #[cfg(debug_assertions)]
                                 self.push_debug_context(format!("{register} = {value:02X}"));
                             }
                             value
                         }
                         RegisterOrImmediate::Immediate(value) => value,
                     };
+                    #[cfg(debug_assertions)]
                     self.push_debug_context(format!("A = {:02X}", self.registers.a));
                     self.registers.a = self.xor(value);
+                    #[cfg(debug_assertions)]
                     self.print_debug(&format!("XOR {source}"), &self.format_context());
                     match source {
                         RegisterOrImmediate::Immediate(_) => (self.pc.wrapping_add(2), 8),
@@ -243,12 +259,14 @@ impl Cpu {
                     let value = match source {
                         RegisterOrImmediate::Register(register) => {
                             let value = self.match_register(register);
+                            #[cfg(debug_assertions)]
                             self.push_debug_context(format!("{register} = {value:02X}"));
                             value
                         }
                         RegisterOrImmediate::Immediate(value) => value,
                     };
                     self.cp(value);
+                    #[cfg(debug_assertions)]
                     self.print_debug(&format!("CP {source}"), &self.format_context());
 
                     match source {
@@ -264,10 +282,12 @@ impl Cpu {
             Instruction::Bit(bit, source) => {
                 let value = self.match_register(source);
                 let mask = 1 << bit;
+                #[cfg(debug_assertions)]
                 self.push_debug_context(format!("{source} = {value:02X}"));
 
                 self.bit(mask, value);
 
+                #[cfg(debug_assertions)]
                 self.print_debug(&format!("BIT {bit}, {source}"), &self.format_context());
                 match source {
                     Register::HLIndirect => (self.pc.wrapping_add(2), 12),
@@ -281,6 +301,7 @@ impl Cpu {
                     .pc
                     .wrapping_add(2)
                     .wrapping_add_signed(i16::from(relative));
+                #[cfg(debug_assertions)]
                 self.print_debug(
                     &format!("JR {condition} {target_address:04X}"),
                     &self.format_context(),
@@ -290,12 +311,15 @@ impl Cpu {
             }
             Instruction::Inc(register) => {
                 let value = self.match_register(register);
+                #[cfg(debug_assertions)]
                 self.push_debug_context(format!("{register} = {value:02X}"));
                 let new_value = self.inc(value);
+                #[cfg(debug_assertions)]
                 self.debug_context
                     .insert(1, format!("{register}' = {new_value:02X}"));
                 self.write_register(register, new_value);
 
+                #[cfg(debug_assertions)]
                 self.print_debug(&format!("INC {register}"), &self.format_context());
                 match register {
                     Register::HLIndirect => (self.pc.wrapping_add(1), 12),
@@ -306,6 +330,7 @@ impl Cpu {
                 let value = self.match_register16(register);
                 let new_value = value.wrapping_add(1);
                 self.write_register16(register, new_value);
+                #[cfg(debug_assertions)]
                 self.print_debug(
                     &format!("INC {register}"),
                     &format!("{register} = {value:02X}, {register}' = {new_value:02X}"),
@@ -317,10 +342,12 @@ impl Cpu {
                 let new_value = self.dec(value);
                 self.write_register(register, new_value);
 
+                #[cfg(debug_assertions)]
                 self.debug_context.insert(
                     0,
                     format!("{register} = {value:02X}, {register}' = {new_value:02X}"),
                 );
+                #[cfg(debug_assertions)]
                 self.print_debug(&format!("DEC {register}"), &self.format_context());
                 match register {
                     Register::HLIndirect => (self.pc.wrapping_add(1), 12),
@@ -331,6 +358,7 @@ impl Cpu {
                 let value = self.match_register16(register);
                 let new_value = value.wrapping_sub(1);
                 self.write_register16(register, new_value);
+                #[cfg(debug_assertions)]
                 self.print_debug(
                     &format!("DEC {register}"),
                     &format!("{register} = {value:04X}, {register}' = {new_value:04X}"),
@@ -341,6 +369,7 @@ impl Cpu {
                 let should_jump = self.match_jump_condition(condition);
                 let pc = self.call(should_jump, address);
 
+                #[cfg(debug_assertions)]
                 self.print_debug(
                     &format!("CALL {condition} {address:04X}"),
                     &self.format_context(),
@@ -349,8 +378,10 @@ impl Cpu {
             }
             Instruction::Ret => {
                 let address = self.bus.read_word(self.sp);
+                #[cfg(debug_assertions)]
                 self.push_debug_context(format!("(SP) = {address:04X}"));
                 let pc = self.retn(true);
+                #[cfg(debug_assertions)]
                 self.print_debug("RET", &self.format_context());
                 // TODO: conditional rets should use `retn`s returned cycles
                 (pc.0, 16)
@@ -362,15 +393,19 @@ impl Cpu {
                     Register16Alt::HL => self.registers.hl(),
                     Register16Alt::AF => self.registers.af(),
                 };
+                #[cfg(debug_assertions)]
                 self.push_debug_context(format!("{register} = {value:04X}"));
                 self.push(value);
+                #[cfg(debug_assertions)]
                 self.print_debug(&format!("PUSH {register}"), &self.format_context());
                 (self.pc.wrapping_add(1), 16)
             }
             Instruction::Pop(register) => {
                 let value = self.pop();
+                #[cfg(debug_assertions)]
                 self.debug_context
                     .insert(0, format!("{register}' = {value:04X}"));
+                #[cfg(debug_assertions)]
                 self.print_debug(&format!("POP {register}"), &self.format_context());
                 match register {
                     Register16Alt::BC => self.registers.set_bc(value),
@@ -383,11 +418,14 @@ impl Cpu {
             Instruction::Rot(rot, register) => match rot {
                 Rot::Rl => {
                     let value = self.match_register(register);
+                    #[cfg(debug_assertions)]
                     self.push_debug_context(format!("{register} = {value:02X}"));
                     let new_value = self.rotate_left_through_carry(value, true);
                     self.write_register(register, new_value);
+                    #[cfg(debug_assertions)]
                     self.debug_context
                         .insert(1, format!("{register}' = {new_value:02X}"));
+                    #[cfg(debug_assertions)]
                     self.print_debug(&format!("RL {register}"), &self.format_context());
 
                     match register {
@@ -398,11 +436,14 @@ impl Cpu {
                 _ => todo!("unimplemented instruction: {:?}", instruction),
             },
             Instruction::Rla => {
+                #[cfg(debug_assertions)]
                 self.push_debug_context(format!("A = {:02X}", self.registers.a));
                 self.registers.a = self.rotate_left_through_carry(self.registers.a, false);
+                #[cfg(debug_assertions)]
                 self.debug_context
                     .insert(1, format!("A' = {:02X}", self.registers.a));
 
+                #[cfg(debug_assertions)]
                 self.print_debug("RLA", &self.format_context());
                 (self.pc.wrapping_add(1), 4)
             }
@@ -456,6 +497,7 @@ impl Cpu {
 
     fn flags_contains(&mut self, flag: Flags) -> bool {
         let contains = self.registers.f.contains(flag);
+        #[cfg(debug_assertions)]
         self.push_debug_context(format!("{} = {}", flag, u8::from(contains)));
         contains
     }
@@ -471,12 +513,14 @@ impl Cpu {
     }
 
     fn push(&mut self, value: u16) {
+        #[cfg(debug_assertions)]
         self.push_debug_context(format!("SP = {:04X}", self.sp));
         self.sp = self.sp.wrapping_sub(1);
         self.bus.write_byte(self.sp, ((value & 0xFF00) >> 8) as u8);
 
         self.sp = self.sp.wrapping_sub(1);
         self.bus.write_byte(self.sp, (value & 0xFF) as u8);
+        #[cfg(debug_assertions)]
         self.push_debug_context(format!("SP' = {:04X}", self.sp));
     }
 
@@ -484,8 +528,10 @@ impl Cpu {
         // BUG: If the stack pointer would wrap in the middle of this read, i think this will have
         // incorrect behaviour
         let word = self.bus.read_word(self.sp);
+        #[cfg(debug_assertions)]
         self.push_debug_context(format!("SP = {:04X}", self.sp));
         self.sp = self.sp.wrapping_add(2);
+        #[cfg(debug_assertions)]
         self.push_debug_context(format!("SP' = {:04X}", self.sp));
         word
     }
@@ -523,6 +569,7 @@ impl Cpu {
 
     fn xor(&mut self, value: u8) -> u8 {
         let new_value = self.registers.a ^ value;
+        #[cfg(debug_assertions)]
         self.push_debug_context(format!("A' = {new_value:02X}"));
         self.set_flag(Flags::Zero, new_value == 0);
         self.registers
@@ -588,6 +635,7 @@ impl Cpu {
             .f
             .remove(make_bitflags!(Flags::{Subtraction | HalfCarry}));
 
+        #[cfg(debug_assertions)]
         self.push_debug_context(format!("C = {carry}"));
         self.set_flag(Flags::Carry, value >> 7 == 1);
 
@@ -596,6 +644,7 @@ impl Cpu {
 
     fn set_flag(&mut self, flag: Flags, cond: bool) {
         let ctx = self.registers.set_flag(flag, cond);
+        #[cfg(debug_assertions)]
         self.push_debug_context(ctx);
     }
 }
