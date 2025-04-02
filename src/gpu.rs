@@ -4,7 +4,7 @@ use bitvec::{BitArr, array::BitArray, order::Msb0};
 use enumflags2::{BitFlags, bitflags};
 use num_derive::FromPrimitive;
 
-use crate::gpu::tile::{Tile, TileRow, empty_tile};
+use crate::gpu::tile::{Colour, Tile, TileRow, empty_tile};
 
 pub const VRAM_BEGIN: usize = 0x8000;
 pub const VRAM_END: usize = 0x9FFF;
@@ -121,8 +121,6 @@ impl Gpu {
                     if self.line >= 154 {
                         self.mode = Mode::OamScan;
                         self.line = 0;
-                        // FIXME: only here for testing
-                        self.buffer.fill(0);
                     }
                 }
             }
@@ -155,15 +153,50 @@ impl Gpu {
         self.tile_set[tile_index][row_index] = tile_row;
     }
 
+    #[allow(clippy::similar_names)]
     fn render_line(&mut self) {
+        const fn lookup_colour(pixel: Colour) -> (u8, u8, u8) {
+            // TODO: implement
+            match pixel {
+                Colour::Three => (0, 0, 0),
+                Colour::Two => (255 / 3, 255 / 3, 255 / 3),
+                Colour::One => (255 / 2, 255 / 2, 255 / 2),
+                Colour::Zero => (255, 255, 255),
+            }
+        }
+        let mut tile_x_index = 0u32;
+        let tile_y_index = self.line.wrapping_add(self.viewport_y_offset);
+
+        // width of entire background is 32 tiles
+        let tile_offset = (u16::from(tile_y_index) / 8) * 32u16;
+
+        let background_tile_map = if self.lcd_control.contains(LCDControl::BackgroundTileMap) {
+            0x9C00
+        } else {
+            0x9800
+        };
+        let tile_map_begin = background_tile_map - VRAM_BEGIN;
+        let tile_map_offset = tile_map_begin + tile_offset as usize;
+
+        let row_y_offset = tile_y_index % 8;
+        let mut pixel_x_index = 0;
+
         self.buffer
             .chunks_exact_mut(3)
             .skip(self.line as usize * WIDTH)
             .take(WIDTH)
-            .for_each(|pixel| {
-                pixel[0] = 255;
-                pixel[1] = 255;
-                pixel[2] = 255;
+            .for_each(|buf| {
+                let tile_index = self.vram[tile_map_offset + tile_x_index as usize];
+                let tile_value = self.tile_set[tile_index as usize][row_y_offset as usize]
+                    .get_colour(pixel_x_index);
+                let (r, g, b) = lookup_colour(tile_value);
+                buf[0] = r;
+                buf[1] = g;
+                buf[2] = b;
+                pixel_x_index = (pixel_x_index + 1) % 8;
+                if pixel_x_index == 0 {
+                    tile_x_index += 1;
+                }
             });
     }
 }
