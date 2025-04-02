@@ -85,9 +85,14 @@ impl MemoryBus {
         }
     }
 
-    // FIXME: memory map
-    pub fn slice_from(&self, pc: u16) -> &[u8] {
-        &self.memory[pc as usize..]
+    pub fn slice_from(&self, pc: u16) -> [u8; 4] {
+        // TODO: iterator?
+        [
+            self.read_byte(pc),
+            self.read_byte(pc + 1),
+            self.read_byte(pc + 2),
+            self.read_byte(pc + 3),
+        ]
     }
 
     // FIXME: memory map

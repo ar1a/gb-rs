@@ -57,7 +57,7 @@ impl Cpu {
     pub fn step(&mut self) -> u8 {
         self.debug_context.clear();
         let slice = self.bus.slice_from(self.pc);
-        let (after, instruction) = parse_instruction(slice).unwrap();
+        let (after, instruction) = parse_instruction(&slice).unwrap();
         let bytes_consumed_len = slice.len() - after.len();
         self.debug_bytes_consumed
             .splice(.., slice[..bytes_consumed_len].iter().copied());
