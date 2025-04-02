@@ -80,7 +80,7 @@ fn main() -> eyre::Result<()> {
             }
 
             debug!(
-                delta = ?(frame_duration - next_frame.duration_since(Instant::now())),
+                delta = ?(frame_duration.saturating_sub(next_frame.duration_since(Instant::now()))),
                 target = ?frame_duration,
                 "frame took"
             );
