@@ -234,6 +234,28 @@ impl Cpu {
                 }
             },
             Instruction::Arithmetic(alu, source) => match alu {
+                Alu::Sub => {
+                    let value = match source {
+                        RegisterOrImmediate::Register(register) => {
+                            let value = self.match_register(register);
+                            debug_context!(self, "{register} = {value:02X}");
+                            value
+                        }
+                        RegisterOrImmediate::Immediate(value) => value,
+                    };
+                    debug_context!(self, insert at 0, "A = {:02X}", self.registers.a);
+                    self.registers.a = self.sub(value);
+                    debug_context!(self, insert at 1, "A' = {:02X}", self.registers.a);
+                    print_debug!(self, "SUB {source}");
+
+                    match source {
+                        RegisterOrImmediate::Immediate(_) => (self.pc.wrapping_add(2), 8),
+                        RegisterOrImmediate::Register(Register::HLIndirect) => {
+                            (self.pc.wrapping_add(1), 8)
+                        }
+                        RegisterOrImmediate::Register(_) => (self.pc.wrapping_add(1), 4),
+                    }
+                }
                 Alu::Xor => {
                     let value = match source {
                         RegisterOrImmediate::Register(register) => {
@@ -247,6 +269,7 @@ impl Cpu {
                     };
                     debug_context!(self, "A = {:02X}", self.registers.a);
                     self.registers.a = self.xor(value);
+                    debug_context!(self, insert at 1, "A' = {:02X}", self.registers.a);
                     print_debug!(self, "XOR {source}");
                     match source {
                         RegisterOrImmediate::Immediate(_) => (self.pc.wrapping_add(2), 8),
@@ -536,6 +559,19 @@ impl Cpu {
         self.registers
             .f
             .remove(make_bitflags!(Flags::{Subtraction | Carry | HalfCarry}));
+        new_value
+    }
+
+    fn sub(&mut self, value: u8) -> u8 {
+        let (new_value, overflow) = self.registers.a.overflowing_sub(value);
+
+        self.set_flag(Flags::Zero, new_value == 0);
+        self.registers.f.insert(Flags::Subtraction);
+        self.set_flag(Flags::Carry, overflow);
+        self.set_flag(
+            Flags::HalfCarry,
+            (self.registers.a & 0b1111) < (value & 0b1111),
+        );
         new_value
     }
 
