@@ -99,13 +99,15 @@ impl Gpu {
     }
 
     fn render_line(&mut self) {
-        let mut line_offset = self.line as usize * WIDTH * 3;
-        for i in 0..WIDTH {
-            self.buffer[line_offset + i] = 255;
-            self.buffer[line_offset + i + 1] = 255;
-            self.buffer[line_offset + i + 2] = 255;
-            line_offset += 2;
-        }
+        self.buffer
+            .chunks_exact_mut(3)
+            .skip(self.line as usize * WIDTH)
+            .take(WIDTH)
+            .for_each(|pixel| {
+                pixel[0] = 255;
+                pixel[1] = 255;
+                pixel[2] = 255;
+            });
     }
 }
 
