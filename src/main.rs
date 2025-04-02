@@ -57,9 +57,7 @@ fn main() -> eyre::Result<()> {
     let _ = std::thread::spawn(move || {
         let boot_rom = include_bytes!("../dmg_boot.bin");
         let test_rom = include_bytes!("../test_roms/cpu_instrs/individual/01-special.gb");
-        let mut cpu = Cpu::default();
-        cpu.bus.slice_mut()[0..256].copy_from_slice(boot_rom);
-        cpu.bus.slice_mut()[256..32768].copy_from_slice(&test_rom[256..]);
+        let mut cpu = Cpu::new(Some(boot_rom), test_rom);
 
         let cycles_per_second = 4_190_000;
         let frame_duration = Duration::from_secs_f64(1.0 / 60.0);

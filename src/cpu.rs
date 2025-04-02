@@ -17,7 +17,7 @@ use crate::disassembler::{
 pub mod memorybus;
 pub mod registers;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Cpu {
     pub registers: Registers,
     /// The Program Counter register
@@ -28,6 +28,22 @@ pub struct Cpu {
     debug_bytes_consumed: Vec<u8>,
     // Optionally used
     debug_context: Vec<String>,
+}
+
+impl Cpu {
+    pub fn new(boot_rom: Option<&[u8]>, game_rom: &[u8]) -> Self {
+        // FIXME: support running without boot_rom
+        // this will need us to set the registers to a good state
+        assert!(boot_rom.is_some());
+        Self {
+            registers: Registers::default(),
+            pc: 0,
+            sp: 0,
+            bus: MemoryBus::new(boot_rom, game_rom),
+            debug_bytes_consumed: Vec::default(),
+            debug_context: Vec::default(),
+        }
+    }
 }
 
 macro_rules! debug_context {
@@ -675,9 +691,7 @@ mod test {
     fn test_boot_rom() {
         let boot_rom = include_bytes!("../dmg_boot.bin");
         let test_rom = include_bytes!("../test_roms/cpu_instrs/individual/01-special.gb");
-        let mut cpu = Cpu::default();
-        cpu.bus.slice_mut()[0..256].copy_from_slice(boot_rom);
-        cpu.bus.slice_mut()[256..32768].copy_from_slice(&test_rom[256..]);
+        let mut cpu = Cpu::new(Some(boot_rom), test_rom);
         while cpu.pc < 0x100 {
             cpu.step();
         }

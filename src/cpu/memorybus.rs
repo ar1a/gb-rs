@@ -3,6 +3,18 @@ use enumflags2::BitFlag;
 
 use crate::gpu::{Gpu, LCDControl, VRAM_BEGIN, VRAM_END};
 
+pub const BOOT_ROM_BEGIN: usize = 0x00;
+pub const BOOT_ROM_END: usize = 0xFF;
+pub const BOOT_ROM_SIZE: usize = BOOT_ROM_END - BOOT_ROM_BEGIN + 1;
+
+pub const ROM_BANK_0_BEGIN: usize = 0x0000;
+pub const ROM_BANK_0_END: usize = 0x3FFF;
+pub const ROM_BANK_0_SIZE: usize = ROM_BANK_0_END - ROM_BANK_0_BEGIN + 1;
+
+pub const ROM_BANK_N_BEGIN: usize = 0x4000;
+pub const ROM_BANK_N_END: usize = 0x7FFF;
+pub const ROM_BANK_N_SIZE: usize = ROM_BANK_N_END - ROM_BANK_N_BEGIN + 1;
+
 pub const IO_BEGIN: usize = 0xFF00;
 pub const IO_END: usize = 0xFF7F;
 pub const IO_SIZE: usize = IO_END - IO_BEGIN + 1;
@@ -13,39 +25,68 @@ pub const HRAM_SIZE: usize = HRAM_END - HRAM_BEGIN + 1;
 
 #[derive(Debug)]
 pub struct MemoryBus {
-    // FIXME: separate into memory segments
-    memory: Box<[u8]>,
+    boot_rom: Option<Box<[u8; BOOT_ROM_SIZE]>>,
+    rom_bank_0: Box<[u8; ROM_BANK_0_SIZE]>,
+    rom_bank_n: Box<[u8; ROM_BANK_N_SIZE]>,
     pub gpu: Gpu,
+    hram: Box<[u8; HRAM_SIZE]>,
 }
 
-impl Default for MemoryBus {
-    fn default() -> Self {
+impl MemoryBus {
+    pub fn new(boot_rom: Option<&[u8]>, game_rom: &[u8]) -> Self {
+        let boot_rom = boot_rom.map(|rom| {
+            rom.to_owned()
+                .into_boxed_slice()
+                .try_into()
+                .unwrap_or_else(|_| {
+                    panic!("Boot ROM to be size {BOOT_ROM_SIZE} (is {})", rom.len())
+                })
+        });
         Self {
-            memory: vec![0; 0xFFFF].into_boxed_slice(),
             gpu: Gpu::default(),
+            boot_rom,
+            rom_bank_0: game_rom[..ROM_BANK_0_SIZE]
+                .to_owned()
+                .into_boxed_slice()
+                .try_into()
+                .expect("ROM to have bank 0"),
+            rom_bank_n: game_rom[ROM_BANK_0_SIZE..ROM_BANK_0_SIZE + ROM_BANK_N_SIZE]
+                .to_owned()
+                .into_boxed_slice()
+                .try_into()
+                .expect("ROM to have bank n"),
+            hram: vec![0; HRAM_SIZE].into_boxed_slice().try_into().unwrap(),
         }
     }
 }
 
 impl MemoryBus {
     pub fn read_byte(&self, address: u16) -> u8 {
+        const ROM_BANK_0_BEGIN: usize = BOOT_ROM_END + 1; // shadowed so that the match statement
+        // doesn't have overlapping ranges
+
         let address = address as usize;
         match address {
-            00..=0x3FFF => self.memory[address],
+            BOOT_ROM_BEGIN..=BOOT_ROM_END => self
+                .boot_rom
+                .as_ref()
+                .map_or_else(|| self.rom_bank_0[address], |boot_rom| boot_rom[address]),
+            ROM_BANK_0_BEGIN..=ROM_BANK_0_END => self.rom_bank_0[address],
+            ROM_BANK_N_BEGIN..=ROM_BANK_N_END => self.rom_bank_n[address - ROM_BANK_N_BEGIN],
             VRAM_BEGIN..=VRAM_END => self.gpu.read_vram(address - VRAM_BEGIN),
             IO_BEGIN..=IO_END => self.read_io_register(address),
-            HRAM_BEGIN..HRAM_END => self.memory[address],
-            _ => todo!("memory region not mapped yet: {:#4x}", address),
+            HRAM_BEGIN..HRAM_END => self.hram[address - HRAM_BEGIN],
+            _ => todo!("memory region not readable yet: {:#4x}", address),
         }
     }
     pub fn write_byte(&mut self, address: u16, value: u8) {
         let address = address as usize;
         match address {
-            00..=0x3FFF => panic!("attempted to write to ROM"),
+            ROM_BANK_0_BEGIN..=ROM_BANK_N_END => panic!("attempted to write to ROM"),
             VRAM_BEGIN..=VRAM_END => self.gpu.write_vram(address - VRAM_BEGIN, value),
             IO_BEGIN..=IO_END => self.write_io_register(address, value),
-            HRAM_BEGIN..HRAM_END => self.memory[address] = value,
-            _ => todo!("memory region not mapped yet: {:#4x}", address),
+            HRAM_BEGIN..HRAM_END => self.hram[address - HRAM_BEGIN] = value,
+            _ => todo!("memory region not writable yet: {:#4x}", address),
         }
     }
 
@@ -93,15 +134,5 @@ impl MemoryBus {
             self.read_byte(pc + 2),
             self.read_byte(pc + 3),
         ]
-    }
-
-    // FIXME: memory map
-    pub fn slice(&self) -> &[u8] {
-        &self.memory
-    }
-
-    // FIXME: memory map
-    pub fn slice_mut(&mut self) -> &mut [u8] {
-        &mut self.memory
     }
 }
