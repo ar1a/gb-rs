@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 
-use tracing::trace;
+use bitvec::{BitArr, array::BitArray, order::Msb0};
+use enumflags2::{BitFlags, bitflags};
+use num_derive::FromPrimitive;
 
 use crate::gpu::tile::{Tile, empty_tile};
 
@@ -11,7 +13,13 @@ pub const VRAM_SIZE: usize = VRAM_END - VRAM_BEGIN + 1;
 pub const WIDTH: usize = 160;
 pub const HEIGHT: usize = 144;
 
-mod tile;
+pub mod tile;
+
+#[derive(Debug, Clone, Copy)]
+enum Palette {
+    Zero = 0,
+    One = 1,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
@@ -19,6 +27,26 @@ pub enum Mode {
     Drawing = 3,
     HBlank = 0,
     VBlank = 1,
+}
+
+#[derive(Debug, Clone, Copy, FromPrimitive)]
+enum TileMapSelect {
+    X9800 = 0,
+    X9C00 = 1,
+}
+
+#[bitflags]
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LCDControl {
+    DisplayEnabled = 1 << 7,
+    WindowTileMap = 1 << 6,
+    WindowEnabled = 1 << 5,
+    TileDataSelect = 1 << 4,
+    BackgroundTileMap = 1 << 3,
+    TallSprites = 1 << 2,
+    SpritesEnabled = 1 << 1,
+    BackgroundEnabled = 1 << 0,
 }
 
 #[derive(Debug)]
@@ -29,6 +57,10 @@ pub struct Gpu {
     cycles: u16,
     pub line: u8,
     pub mode: Mode,
+
+    pub lcd_control: BitFlags<LCDControl>,
+    pub background_colours: BitArr!(for 8, in u8, Msb0),
+    pub viewport_y_offset: u8,
 }
 
 impl Default for Gpu {
@@ -43,12 +75,18 @@ impl Default for Gpu {
             cycles: 0,
             line: 0,
             mode: Mode::HBlank,
+            lcd_control: BitFlags::EMPTY,
+            background_colours: BitArray::ZERO,
+            viewport_y_offset: 0,
         }
     }
 }
 
 impl Gpu {
     pub fn step(&mut self, cycles: u8) {
+        if !self.lcd_control.contains(LCDControl::DisplayEnabled) {
+            return;
+        }
         self.cycles = self.cycles.wrapping_add(u16::from(cycles));
         match self.mode {
             Mode::OamScan => {
@@ -78,14 +116,14 @@ impl Gpu {
             Mode::VBlank => {
                 if self.cycles >= 456 {
                     self.cycles %= 456;
-                }
-                self.line += 1;
+                    self.line += 1;
 
-                if self.line >= 154 {
-                    self.mode = Mode::OamScan;
-                    self.line = 0;
-                    // FIXME: only here for testing
-                    self.buffer.fill(0);
+                    if self.line >= 154 {
+                        self.mode = Mode::OamScan;
+                        self.line = 0;
+                        // FIXME: only here for testing
+                        self.buffer.fill(0);
+                    }
                 }
             }
         }
