@@ -234,6 +234,28 @@ impl Cpu {
                 }
             },
             Instruction::Arithmetic(alu, source) => match alu {
+                Alu::Add => {
+                    let value = match source {
+                        RegisterOrImmediate::Register(register) => {
+                            let value = self.match_register(register);
+                            debug_context!(self, "{register} = {value:02X}");
+                            value
+                        }
+                        RegisterOrImmediate::Immediate(value) => value,
+                    };
+                    debug_context!(self, insert at 0, "A = {:02X}", self.registers.a);
+                    self.registers.a = self.add(value);
+                    debug_context!(self, insert at 1, "A' = {:02X}", self.registers.a);
+                    print_debug!(self, "ADD {source}");
+
+                    match source {
+                        RegisterOrImmediate::Immediate(_) => (self.pc.wrapping_add(2), 8),
+                        RegisterOrImmediate::Register(Register::HLIndirect) => {
+                            (self.pc.wrapping_add(1), 8)
+                        }
+                        RegisterOrImmediate::Register(_) => (self.pc.wrapping_add(1), 4),
+                    }
+                }
                 Alu::Sub => {
                     let value = match source {
                         RegisterOrImmediate::Register(register) => {
