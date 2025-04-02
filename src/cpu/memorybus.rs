@@ -64,6 +64,8 @@ impl MemoryBus {
         match address {
             0xFF11 => { /* Sound Ch1 Length Timer and Duty Cycle */ }
             0xFF12 => { /* Sound Ch1 Volume and Envelope */ }
+            0xFF13 => { /* Sound Ch1 Period Low */ }
+            0xFF14 => { /* Sound Ch1 Period High and Control */ }
             0xFF24 => { /* Master Volume and VIN panning */ }
             0xFF25 => { /* Sound Panning */ }
             0xFF26 => { /* Sound Enabled */ }
