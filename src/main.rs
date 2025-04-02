@@ -6,7 +6,7 @@ use std::{
 
 use jane_eyre::eyre::{self, eyre};
 use minifb::{Key, Window, WindowOptions};
-use tracing::{debug, info, warn};
+use tracing::{trace, warn};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{
@@ -81,7 +81,7 @@ fn main() -> eyre::Result<()> {
                 last_mode = cpu.bus.gpu.mode;
             }
 
-            debug!(
+            trace!(
                 delta = ?(frame_duration - next_frame.duration_since(Instant::now())),
                 target = ?frame_duration,
                 "frame took"
