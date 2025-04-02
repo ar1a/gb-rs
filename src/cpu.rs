@@ -80,6 +80,7 @@ impl Cpu {
             .join(", ")
     }
     #[cfg(not(debug_assertions))]
+    #[inline(always)]
     fn format_context(&self) -> String {
         String::new()
     }
@@ -96,12 +97,14 @@ impl Cpu {
         trace!("{:04X} {bytes:12} {opcode:32} ; {context}", self.pc);
     }
     #[cfg(not(debug_assertions))]
+    #[inline(always)]
     fn print_debug(&self, opcode: &str, context: &str) {}
     #[cfg(debug_assertions)]
     fn push_debug_context(&mut self, ctx: String) {
         self.debug_context.push(ctx);
     }
     #[cfg(not(debug_assertions))]
+    #[inline(always)]
     fn push_debug_context(&mut self, ctx: String) {
         self.debug_context.push("".to_string());
     }

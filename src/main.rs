@@ -19,7 +19,8 @@ mod disassembler;
 mod gpu;
 
 const fn from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
-    u32::from_be_bytes([0, r, g, b])
+    let (r, g, b) = (r as u32, g as u32, b as u32);
+    (r << 16) | (g << 8) | b
 }
 
 fn main() -> eyre::Result<()> {
@@ -32,7 +33,7 @@ fn main() -> eyre::Result<()> {
                 .from_env_lossy(),
         )
         .init();
-    let buffer = Arc::new(Mutex::new(vec![from_u8_rgb(0, 127, 255); WIDTH * HEIGHT]));
+    let buffer = Arc::new(Mutex::new(vec![0; WIDTH * HEIGHT * 3]));
     let gui_buffer = Arc::clone(&buffer);
     let gui_thread = std::thread::spawn(move || {
         let mut window = Window::new("gb-rs", WIDTH, HEIGHT, WindowOptions::default())
@@ -42,7 +43,13 @@ fn main() -> eyre::Result<()> {
 
         while window.is_open() && !window.is_key_down(Key::Escape) {
             // FIXME: copies 92KB 60 times a second...
-            let buffer = gui_buffer.lock().unwrap().clone();
+            let buffer: Vec<u32> = gui_buffer
+                .lock()
+                .unwrap()
+                .clone()
+                .chunks_exact(3)
+                .map(|rgb| from_u8_rgb(rgb[0], rgb[1], rgb[2]))
+                .collect();
             window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
         }
     });
@@ -71,18 +78,7 @@ fn main() -> eyre::Result<()> {
 
                 if cpu.bus.gpu.mode == Mode::HBlank && last_mode != Mode::HBlank {
                     let mut buffer = buffer.lock().unwrap();
-                    buffer
-                        .iter_mut()
-                        .skip(cpu.bus.gpu.line as usize * WIDTH)
-                        .zip(
-                            cpu.bus
-                                .gpu
-                                .buffer
-                                .chunks_exact(3)
-                                .skip(cpu.bus.gpu.line as usize * WIDTH),
-                        )
-                        // .take(WIDTH)
-                        .for_each(|(x, rgb)| *x = from_u8_rgb(rgb[0], rgb[1], rgb[2]));
+                    buffer.clone_from_slice(&*cpu.bus.gpu.buffer);
                 }
                 last_mode = cpu.bus.gpu.mode;
             }
