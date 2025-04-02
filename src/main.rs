@@ -62,19 +62,13 @@ fn main() -> eyre::Result<()> {
         cpu.bus.slice_mut()[256..32768].copy_from_slice(&test_rom[256..]);
 
         let cycles_per_second = 4_190_000;
-        let bursts_per_second = Duration::from_secs_f64(1.0 / 60.0);
+        let frame_duration = Duration::from_secs_f64(1.0 / 60.0);
         let target_cycles = cycles_per_second / 60;
 
-        let mut next_frame = Instant::now();
+        let mut next_frame = Instant::now() + frame_duration;
         let mut last_mode = cpu.bus.gpu.mode;
         while cpu.pc < 0x100 {
             // do 60 bursts of cycles per second
-            debug!(delta = ?(next_frame.duration_since(Instant::now())), target = ?bursts_per_second, "frame took");
-            if !next_frame.elapsed().is_zero() {
-                warn!("lagging by {:?}", next_frame.elapsed());
-            }
-            std::thread::sleep_until(next_frame);
-            next_frame += bursts_per_second;
             let mut cycles_elapsed = 0;
             while cycles_elapsed < target_cycles {
                 let cycles = cpu.step();
@@ -86,6 +80,18 @@ fn main() -> eyre::Result<()> {
                 }
                 last_mode = cpu.bus.gpu.mode;
             }
+
+            debug!(
+                delta = ?(frame_duration - next_frame.duration_since(Instant::now())),
+                target = ?frame_duration,
+                "frame took"
+            );
+            if !next_frame.elapsed().is_zero() {
+                warn!("lagging by {:?}", next_frame.elapsed());
+            }
+
+            std::thread::sleep_until(next_frame);
+            next_frame += frame_duration;
         }
     });
 
