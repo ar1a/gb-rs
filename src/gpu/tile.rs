@@ -23,15 +23,10 @@ pub const fn empty_tile() -> Tile {
     }; 8]
 }
 
-pub fn from_bytes_row(bytes: [u8; 2]) -> TileRow {
-    let tiles = BitArray::new(bytes);
-    TileRow { tiles }
-}
-
 pub fn from_bytes_tile(bytes: [u8; 16]) -> Tile {
     bytes
         .chunks_exact(2)
-        .map(|bytes| from_bytes_row(bytes.try_into().unwrap()))
+        .map(|bytes| TileRow::from_bytes(bytes.try_into().unwrap()))
         .collect::<Vec<_>>()
         .try_into()
         .unwrap()
@@ -50,6 +45,11 @@ impl TileRow {
             tile_row: self,
             index: 0,
         }
+    }
+
+    pub fn from_bytes(bytes: [u8; 2]) -> Self {
+        let tiles = BitArray::new(bytes);
+        Self { tiles }
     }
 }
 

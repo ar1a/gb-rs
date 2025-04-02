@@ -4,7 +4,7 @@ use bitvec::{BitArr, array::BitArray, order::Msb0};
 use enumflags2::{BitFlags, bitflags};
 use num_derive::FromPrimitive;
 
-use crate::gpu::tile::{Tile, empty_tile};
+use crate::gpu::tile::{Tile, TileRow, empty_tile};
 
 pub const VRAM_BEGIN: usize = 0x8000;
 pub const VRAM_END: usize = 0x9FFF;
@@ -132,8 +132,27 @@ impl Gpu {
         self.vram[index]
     }
 
-    pub const fn write_vram(&mut self, index: usize, value: u8) {
+    pub fn write_vram(&mut self, index: usize, value: u8) {
         self.vram[index] = value;
+        // if we're not writing to the tile set storage, return early
+        if index >= 0x1800 {
+            return;
+        }
+
+        // tile rows are encoded as 2 bytes, with the first byte always on an even address. This
+        // ignores the last bit, so the index is always an even number.
+        let normalized_index = index & (!1);
+
+        let tile_row = TileRow::from_bytes(
+            self.vram[normalized_index..=normalized_index + 1]
+                .try_into()
+                .unwrap(),
+        );
+
+        let tile_index = index / 16;
+        let row_index = (index % 16) / 2;
+
+        self.tile_set[tile_index][row_index] = tile_row;
     }
 
     fn render_line(&mut self) {
