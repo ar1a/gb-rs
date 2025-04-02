@@ -3,7 +3,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 
 #[derive(Debug, Clone, Copy, FromPrimitive, ToPrimitive)]
-pub enum Pixel {
+pub enum Colour {
     Zero = 0,
     One = 1,
     Two = 2,
@@ -38,11 +38,11 @@ pub fn from_bytes_tile(bytes: [u8; 16]) -> Tile {
 }
 
 impl TileRow {
-    pub fn get_tile(self, tile: u8) -> Pixel {
+    pub fn get_colour(self, tile: u8) -> Colour {
         let tile = usize::from(tile);
         let lsb = u8::from(self.tiles[tile]);
         let msb = u8::from(self.tiles[tile + 8]);
-        Pixel::from_u8(msb << 1 | lsb).unwrap()
+        Colour::from_u8(msb << 1 | lsb).unwrap()
     }
 
     pub const fn iter(&self) -> TileRowIterator {
@@ -59,11 +59,11 @@ pub struct TileRowIterator<'a> {
 }
 
 impl Iterator for TileRowIterator<'_> {
-    type Item = Pixel;
+    type Item = Colour;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < 8 {
-            let result = Some(self.tile_row.get_tile(self.index));
+            let result = Some(self.tile_row.get_colour(self.index));
             self.index += 1;
             result
         } else {
