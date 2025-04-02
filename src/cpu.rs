@@ -41,6 +41,18 @@ macro_rules! debug_context {
     };
 }
 
+macro_rules! print_debug {
+    ($self:ident, [$($tt:tt)*], [$($ctx:tt)*] $(,)?) => {
+        #[cfg(debug_assertions)]
+        $self.print_debug(&format!($($tt)*), &format!($($ctx)*));
+    };
+
+    ($self:ident, $($tt:tt)*) => {
+        #[cfg(debug_assertions)]
+        $self.print_debug(&format!($($tt)*), &$self.format_context());
+    };
+}
+
 impl Cpu {
     pub fn step(&mut self) -> u8 {
         self.debug_context.clear();
@@ -141,21 +153,13 @@ impl Cpu {
                         Direction::IntoA => {
                             let value = self.bus.read_byte(address);
                             debug_context!(self, "A' = {value:02X}");
-                            #[cfg(debug_assertions)]
-                            self.print_debug(
-                                &format!("LD A, ({})", indirect_type.to_opcode_string()),
-                                &self.format_context(),
-                            );
+                            print_debug!(self, "LD A, ({})", indirect_type.to_opcode_string());
                             self.registers.a = value;
                         }
                         Direction::FromA => {
                             let value = self.registers.a;
                             debug_context!(self, "A = {value:02X}");
-                            #[cfg(debug_assertions)]
-                            self.print_debug(
-                                &format!("LD ({}), A", indirect_type.to_opcode_string()),
-                                &self.format_context(),
-                            );
+                            print_debug!(self, "LD ({}), A", indirect_type.to_opcode_string());
                             self.bus.write_byte(address, value);
                         }
                     }
@@ -182,8 +186,7 @@ impl Cpu {
                             value
                         }
                     };
-                    #[cfg(debug_assertions)]
-                    self.print_debug(&format!("LD {register}, {source}"), &self.format_context());
+                    print_debug!(self, "LD {register}, {source}");
                     self.write_register(register, value);
                     match source {
                         RegisterOrImmediate::Immediate(_) => (self.pc.wrapping_add(2), 8),
@@ -195,8 +198,7 @@ impl Cpu {
                         LoadWordSource::Immediate(x) => x,
                     };
                     self.write_register16(register, source_value);
-                    #[cfg(debug_assertions)]
-                    self.print_debug(&format!("LD {register}, {source_value:02X}"), "");
+                    print_debug!(self, "LD {register}, {source_value:02X}");
                     match source {
                         LoadWordSource::Immediate(_) => (self.pc.wrapping_add(3), 12),
                     }
@@ -214,15 +216,13 @@ impl Cpu {
                     match direction {
                         Direction::FromA => {
                             debug_context!(self, "A = {:02X}", self.registers.a);
-                            #[cfg(debug_assertions)]
-                            self.print_debug(&format!("LDH ({source}), A"), &self.format_context());
+                            print_debug!(self, "LDH ({source}), A");
                             self.bus.write_byte(address, self.registers.a);
                         }
                         Direction::IntoA => {
                             let value = self.bus.read_byte(address);
                             debug_context!(self, "({address:04X}) = {value:02X}");
-                            #[cfg(debug_assertions)]
-                            self.print_debug(&format!("LDH A, ({source})"), &self.format_context());
+                            print_debug!(self, "LDH A, ({source})");
                             self.registers.a = self.bus.read_byte(address);
                         }
                     }
@@ -247,8 +247,7 @@ impl Cpu {
                     };
                     debug_context!(self, "A = {:02X}", self.registers.a);
                     self.registers.a = self.xor(value);
-                    #[cfg(debug_assertions)]
-                    self.print_debug(&format!("XOR {source}"), &self.format_context());
+                    print_debug!(self, "XOR {source}");
                     match source {
                         RegisterOrImmediate::Immediate(_) => (self.pc.wrapping_add(2), 8),
                         RegisterOrImmediate::Register(Register::HLIndirect) => {
@@ -267,8 +266,7 @@ impl Cpu {
                         RegisterOrImmediate::Immediate(value) => value,
                     };
                     self.cp(value);
-                    #[cfg(debug_assertions)]
-                    self.print_debug(&format!("CP {source}"), &self.format_context());
+                    print_debug!(self, "CP {source}");
 
                     match source {
                         RegisterOrImmediate::Immediate(_) => (self.pc.wrapping_add(2), 8),
@@ -287,8 +285,7 @@ impl Cpu {
 
                 self.bit(mask, value);
 
-                #[cfg(debug_assertions)]
-                self.print_debug(&format!("BIT {bit}, {source}"), &self.format_context());
+                print_debug!(self, "BIT {bit}, {source}");
                 match source {
                     Register::HLIndirect => (self.pc.wrapping_add(2), 12),
                     _ => (self.pc.wrapping_add(2), 8),
@@ -301,11 +298,7 @@ impl Cpu {
                     .pc
                     .wrapping_add(2)
                     .wrapping_add_signed(i16::from(relative));
-                #[cfg(debug_assertions)]
-                self.print_debug(
-                    &format!("JR {condition} {target_address:04X}"),
-                    &self.format_context(),
-                );
+                print_debug!(self, "JR {condition} {target_address:04X}");
 
                 self.relative_jump(should_jump, relative)
             }
@@ -316,8 +309,7 @@ impl Cpu {
                 debug_context!(self, insert at 1, "{register}' = {new_value:02X}");
                 self.write_register(register, new_value);
 
-                #[cfg(debug_assertions)]
-                self.print_debug(&format!("INC {register}"), &self.format_context());
+                print_debug!(self, "INC {register}");
                 match register {
                     Register::HLIndirect => (self.pc.wrapping_add(1), 12),
                     _ => (self.pc.wrapping_add(1), 4),
@@ -327,10 +319,10 @@ impl Cpu {
                 let value = self.match_register16(register);
                 let new_value = value.wrapping_add(1);
                 self.write_register16(register, new_value);
-                #[cfg(debug_assertions)]
-                self.print_debug(
-                    &format!("INC {register}"),
-                    &format!("{register} = {value:02X}, {register}' = {new_value:02X}"),
+                print_debug!(
+                    self,
+                    ["INC {register}"],
+                    ["{register} = {value:02X}, {register}' = {new_value:02X}"]
                 );
                 (self.pc.wrapping_add(1), 8)
             }
@@ -342,8 +334,7 @@ impl Cpu {
                 debug_context!(
                     self, insert at 0, "{register} = {value:02X}, {register}' = {new_value:02X}",
                 );
-                #[cfg(debug_assertions)]
-                self.print_debug(&format!("DEC {register}"), &self.format_context());
+                print_debug!(self, "DEC {register}");
                 match register {
                     Register::HLIndirect => (self.pc.wrapping_add(1), 12),
                     _ => (self.pc.wrapping_add(1), 4),
@@ -353,10 +344,10 @@ impl Cpu {
                 let value = self.match_register16(register);
                 let new_value = value.wrapping_sub(1);
                 self.write_register16(register, new_value);
-                #[cfg(debug_assertions)]
-                self.print_debug(
-                    &format!("DEC {register}"),
-                    &format!("{register} = {value:04X}, {register}' = {new_value:04X}"),
+                print_debug!(
+                    self,
+                    ["DEC {register}"],
+                    ["{register} = {value:04X}, {register}' = {new_value:04X}"]
                 );
                 (self.pc.wrapping_add(1), 8)
             }
@@ -364,19 +355,14 @@ impl Cpu {
                 let should_jump = self.match_jump_condition(condition);
                 let pc = self.call(should_jump, address);
 
-                #[cfg(debug_assertions)]
-                self.print_debug(
-                    &format!("CALL {condition} {address:04X}"),
-                    &self.format_context(),
-                );
+                print_debug!(self, "CALL {condition} {address:04X}");
                 pc
             }
             Instruction::Ret => {
                 let address = self.bus.read_word(self.sp);
                 debug_context!(self, "(SP) = {address:04X}");
                 let pc = self.retn(true);
-                #[cfg(debug_assertions)]
-                self.print_debug("RET", &self.format_context());
+                print_debug!(self, ["RET"], [""]);
                 // TODO: conditional rets should use `retn`s returned cycles
                 (pc.0, 16)
             }
@@ -389,15 +375,13 @@ impl Cpu {
                 };
                 debug_context!(self, "{register} = {value:04X}");
                 self.push(value);
-                #[cfg(debug_assertions)]
-                self.print_debug(&format!("PUSH {register}"), &self.format_context());
+                print_debug!(self, "PUSH {register}");
                 (self.pc.wrapping_add(1), 16)
             }
             Instruction::Pop(register) => {
                 let value = self.pop();
                 debug_context!(self, insert at 0, "{register}' = {value:04X}");
-                #[cfg(debug_assertions)]
-                self.print_debug(&format!("POP {register}"), &self.format_context());
+                print_debug!(self, "POP {register}");
                 match register {
                     Register16Alt::BC => self.registers.set_bc(value),
                     Register16Alt::DE => self.registers.set_de(value),
@@ -413,8 +397,7 @@ impl Cpu {
                     let new_value = self.rotate_left_through_carry(value, true);
                     self.write_register(register, new_value);
                     debug_context!(self, insert at 1, "{register}' = {new_value:02X}");
-                    #[cfg(debug_assertions)]
-                    self.print_debug(&format!("RL {register}"), &self.format_context());
+                    print_debug!(self, "RL {register}");
 
                     match register {
                         Register::HLIndirect => (self.pc.wrapping_add(2), 16),
@@ -428,8 +411,7 @@ impl Cpu {
                 self.registers.a = self.rotate_left_through_carry(self.registers.a, false);
                 debug_context!(self, insert at 1, "A' = {:02X}", self.registers.a);
 
-                #[cfg(debug_assertions)]
-                self.print_debug("RLA", &self.format_context());
+                print_debug!(self, "RLA");
                 (self.pc.wrapping_add(1), 4)
             }
             _ => todo!("unimplemented instruction: {:?}", instruction),
