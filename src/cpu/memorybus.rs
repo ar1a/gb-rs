@@ -100,6 +100,15 @@ impl MemoryBus {
         self.write_byte(address + 1, bytes[1]);
     }
 
+    fn read_io_register(&self, address: usize) -> u8 {
+        match address {
+            0xFF40 => self.gpu.lcd_control.bits(),
+            0xFF42 => self.gpu.viewport_y_offset,
+            0xFF44 => self.gpu.line,
+            _ => todo!("implement io register read {address:04X}"),
+        }
+    }
+
     #[allow(clippy::match_same_arms)]
     fn write_io_register(&mut self, address: usize, value: u8) {
         match address {
@@ -113,16 +122,8 @@ impl MemoryBus {
             0xFF40 => self.gpu.lcd_control = LCDControl::from_bits(value).unwrap(),
             0xFF42 => self.gpu.viewport_y_offset = value,
             0xFF47 => self.gpu.background_colours = BitArray::new([value]),
+            0xFF50 => self.boot_rom = None,
             _ => todo!("implement io register write {address:04X}"),
-        }
-    }
-
-    fn read_io_register(&self, address: usize) -> u8 {
-        match address {
-            0xFF40 => self.gpu.lcd_control.bits(),
-            0xFF42 => self.gpu.viewport_y_offset,
-            0xFF44 => self.gpu.line,
-            _ => todo!("implement io register read {address:04X}"),
         }
     }
 
