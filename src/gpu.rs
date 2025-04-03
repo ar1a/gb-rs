@@ -182,15 +182,17 @@ impl Gpu {
                 Colour::Zero => (255, 255, 255),
             }
         }
-        let tile_x_coordinate = usize::from(self.scroll_x / 8);
+        let tile_x_coordinate = usize::from(self.scroll_x / 8); // FIXME: Wrapping might be broken
         let tile_y_coordinate = self.line.wrapping_add(self.scroll_y);
         let background_tile_map = self.lcd_control.bg_tilemap_address();
         let offset = 32 * (usize::from(tile_y_coordinate) / 8);
-        let address = background_tile_map - VRAM_BEGIN + offset + tile_x_coordinate;
+        let address = background_tile_map - VRAM_BEGIN + offset;
 
         let pixels = self.vram[address + tile_x_coordinate..]
             .iter()
-            .map(|index| &self.tile_set[usize::from(*index)][usize::from(tile_y_coordinate) % 8])
+            .map(|tile_number| {
+                &self.tile_set[usize::from(*tile_number)][usize::from(tile_y_coordinate) % 8]
+            })
             .flat_map(|row| row.iter())
             .skip(usize::from(self.scroll_x) % 8);
 
