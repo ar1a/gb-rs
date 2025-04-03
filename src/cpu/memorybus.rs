@@ -103,7 +103,7 @@ impl MemoryBus {
     fn read_io_register(&self, address: usize) -> u8 {
         match address {
             0xFF40 => self.gpu.lcd_control.bits(),
-            0xFF42 => self.gpu.viewport_y_offset,
+            0xFF42 => self.gpu.scroll_y,
             0xFF44 => self.gpu.line,
             _ => todo!("implement io register read {address:04X}"),
         }
@@ -120,7 +120,7 @@ impl MemoryBus {
             0xFF25 => { /* Sound Panning */ }
             0xFF26 => { /* Sound Enabled */ }
             0xFF40 => self.gpu.lcd_control = LCDControl::from_bits(value).unwrap(),
-            0xFF42 => self.gpu.viewport_y_offset = value,
+            0xFF42 => self.gpu.scroll_y = value,
             0xFF47 => self.gpu.background_colours = BitArray::new([value]),
             0xFF50 => self.boot_rom = None,
             _ => todo!("implement io register write {address:04X}"),

@@ -60,7 +60,8 @@ pub struct Gpu {
 
     pub lcd_control: BitFlags<LCDControl>,
     pub background_colours: BitArr!(for 8, in u8, Msb0),
-    pub viewport_y_offset: u8,
+    pub scroll_y: u8,
+    pub scroll_x: u8,
 }
 
 impl Default for Gpu {
@@ -77,7 +78,8 @@ impl Default for Gpu {
             mode: Mode::HBlank,
             lcd_control: BitFlags::EMPTY,
             background_colours: BitArray::ZERO,
-            viewport_y_offset: 0,
+            scroll_y: 0,
+            scroll_x: 0,
         }
     }
 }
@@ -164,8 +166,8 @@ impl Gpu {
                 Colour::Zero => (255, 255, 255),
             }
         }
-        let mut tile_x_index = 0u32;
-        let tile_y_index = self.line.wrapping_add(self.viewport_y_offset);
+        let mut tile_x_index = self.scroll_x / 8;
+        let tile_y_index = self.line.wrapping_add(self.scroll_y);
 
         // width of entire background is 32 tiles
         let tile_offset = (u16::from(tile_y_index) / 8) * 32u16;
@@ -179,7 +181,7 @@ impl Gpu {
         let tile_map_offset = tile_map_begin + tile_offset as usize;
 
         let row_y_offset = tile_y_index % 8;
-        let mut pixel_x_index = 0;
+        let mut pixel_x_index = self.scroll_x % 8;
 
         self.buffer
             .chunks_exact_mut(3)
