@@ -40,9 +40,12 @@ enum TileMapSelect {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LCDControl {
     DisplayEnabled = 1 << 7,
+    // On = 0x9C00, Off = 0x9800
     WindowTileMap = 1 << 6,
     WindowEnabled = 1 << 5,
+    /// On = 0x8000, Off = 0x8800
     TileDataSelect = 1 << 4,
+    // On = 0x9C00, Off = 0x9800
     BackgroundTileMap = 1 << 3,
     TallSprites = 1 << 2,
     SpritesEnabled = 1 << 1,
@@ -62,6 +65,19 @@ pub struct Gpu {
     pub background_colours: BitArr!(for 8, in u8, Msb0),
     pub scroll_y: u8,
     pub scroll_x: u8,
+}
+
+trait LCDExt {
+    fn bg_tilemap_address(&self) -> usize;
+}
+impl LCDExt for BitFlags<LCDControl> {
+    fn bg_tilemap_address(&self) -> usize {
+        if self.contains(LCDControl::BackgroundTileMap) {
+            0x9C00
+        } else {
+            0x9800
+        }
+    }
 }
 
 impl Default for Gpu {
@@ -155,7 +171,7 @@ impl Gpu {
         self.tile_set[tile_index][row_index] = tile_row;
     }
 
-    #[allow(clippy::similar_names)]
+    #[allow(clippy::cast_possible_truncation, clippy::similar_names)]
     fn render_line(&mut self) {
         const fn lookup_colour(pixel: Colour) -> (u8, u8, u8) {
             // TODO: implement
@@ -166,39 +182,28 @@ impl Gpu {
                 Colour::Zero => (255, 255, 255),
             }
         }
-        let mut tile_x_index = self.scroll_x / 8;
-        let tile_y_index = self.line.wrapping_add(self.scroll_y);
+        let tile_x_coordinate = usize::from(self.scroll_x / 8);
+        let tile_y_coordinate = self.line.wrapping_add(self.scroll_y);
+        let background_tile_map = self.lcd_control.bg_tilemap_address();
+        let offset = 32 * (usize::from(tile_y_coordinate) / 8);
+        let address = background_tile_map - VRAM_BEGIN + offset + tile_x_coordinate;
 
-        // width of entire background is 32 tiles
-        let tile_offset = (u16::from(tile_y_index) / 8) * 32u16;
-
-        let background_tile_map = if self.lcd_control.contains(LCDControl::BackgroundTileMap) {
-            0x9C00
-        } else {
-            0x9800
-        };
-        let tile_map_begin = background_tile_map - VRAM_BEGIN;
-        let tile_map_offset = tile_map_begin + tile_offset as usize;
-
-        let row_y_offset = tile_y_index % 8;
-        let mut pixel_x_index = self.scroll_x % 8;
+        let pixels = self.vram[address + tile_x_coordinate..]
+            .iter()
+            .map(|index| &self.tile_set[usize::from(*index)][usize::from(tile_y_coordinate) % 8])
+            .flat_map(|row| row.iter())
+            .skip(usize::from(self.scroll_x) % 8);
 
         self.buffer
             .chunks_exact_mut(3)
             .skip(self.line as usize * WIDTH)
             .take(WIDTH)
-            .for_each(|buf| {
-                let tile_index = self.vram[tile_map_offset + tile_x_index as usize];
-                let tile_value = self.tile_set[tile_index as usize][row_y_offset as usize]
-                    .get_colour(pixel_x_index);
-                let (r, g, b) = lookup_colour(tile_value);
+            .zip(pixels)
+            .for_each(|(buf, pixel)| {
+                let (r, g, b) = lookup_colour(pixel);
                 buf[0] = r;
                 buf[1] = g;
                 buf[2] = b;
-                pixel_x_index = (pixel_x_index + 1) % 8;
-                if pixel_x_index == 0 {
-                    tile_x_index += 1;
-                }
             });
     }
 }
