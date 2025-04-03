@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 
-use bitvec::{BitArr, array::BitArray, order::Msb0};
+use bitvec::{BitArr, array::BitArray, order::Lsb0};
 use enumflags2::{BitFlags, bitflags};
 use num_derive::FromPrimitive;
 
-use crate::gpu::tile::{Colour, Tile, TileRow, empty_tile};
+use crate::gpu::tile::{ColourIndex, Tile, TileRow, empty_tile};
 
 pub const VRAM_BEGIN: usize = 0x8000;
 pub const VRAM_END: usize = 0x9FFF;
@@ -62,7 +62,7 @@ pub struct Gpu {
     pub mode: Mode,
 
     pub lcd_control: BitFlags<LCDControl>,
-    pub background_colours: BitArr!(for 8, in u8, Msb0),
+    pub background_colours: BitArr!(for 8, in u8, Lsb0),
     pub scroll_y: u8,
     pub scroll_x: u8,
 }
@@ -173,15 +173,18 @@ impl Gpu {
 
     #[allow(clippy::cast_possible_truncation, clippy::similar_names)]
     fn render_line(&mut self) {
-        const fn lookup_colour(pixel: Colour) -> (u8, u8, u8) {
-            // TODO: implement
-            match pixel {
-                Colour::Three => (0, 0, 0),
-                Colour::Two => (255 / 3, 255 / 3, 255 / 3),
-                Colour::One => (255 / 2, 255 / 2, 255 / 2),
-                Colour::Zero => (255, 255, 255),
+        let lookup_colour = |pixel: ColourIndex| -> (u8, u8, u8) {
+            let bit = pixel as usize * 2;
+            let value = &self.background_colours[bit..=bit + 1];
+            let value = u8::from(value[0]) << 1 | u8::from(value[1]);
+            match value {
+                0 => (255, 255, 255),
+                1 => (170, 170, 170),
+                2 => (85, 85, 85),
+                3 => (0, 0, 0),
+                _ => unreachable!(),
             }
-        }
+        };
         let tile_x_coordinate = usize::from(self.scroll_x / 8); // FIXME: Wrapping might be broken
         let tile_y_coordinate = self.line.wrapping_add(self.scroll_y);
         let background_tile_map = self.lcd_control.bg_tilemap_address();

@@ -1,14 +1,4 @@
 use bitvec::{BitArr, array::BitArray, order::Msb0};
-use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::FromPrimitive;
-
-#[derive(Debug, Clone, Copy, FromPrimitive, ToPrimitive)]
-pub enum Colour {
-    Zero = 0,
-    One = 1,
-    Two = 2,
-    Three = 3,
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TileRow {
@@ -32,12 +22,13 @@ pub fn from_bytes_tile(bytes: [u8; 16]) -> Tile {
         .unwrap()
 }
 
+pub type ColourIndex = u8;
 impl TileRow {
-    pub fn get_colour(self, tile: u8) -> Colour {
+    pub fn get_colour(self, tile: u8) -> ColourIndex {
         let tile = usize::from(tile);
         let lsb = u8::from(self.tiles[tile]);
         let msb = u8::from(self.tiles[tile + 8]);
-        Colour::from_u8(msb << 1 | lsb).unwrap()
+        msb << 1 | lsb
     }
 
     pub const fn iter(&self) -> TileRowIterator {
@@ -59,7 +50,7 @@ pub struct TileRowIterator<'a> {
 }
 
 impl Iterator for TileRowIterator<'_> {
-    type Item = Colour;
+    type Item = ColourIndex;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < 8 {
