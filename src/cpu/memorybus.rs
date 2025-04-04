@@ -15,6 +15,10 @@ pub const ROM_BANK_N_BEGIN: usize = 0x4000;
 pub const ROM_BANK_N_END: usize = 0x7FFF;
 pub const ROM_BANK_N_SIZE: usize = ROM_BANK_N_END - ROM_BANK_N_BEGIN + 1;
 
+pub const WRAM_BEGIN: usize = 0xC000;
+pub const WRAM_END: usize = 0xDFFF;
+pub const WRAM_SIZE: usize = WRAM_END - WRAM_BEGIN + 1;
+
 pub const IO_BEGIN: usize = 0xFF00;
 pub const IO_END: usize = 0xFF7F;
 pub const IO_SIZE: usize = IO_END - IO_BEGIN + 1;
@@ -28,6 +32,7 @@ pub struct MemoryBus {
     boot_rom: Option<Box<[u8; BOOT_ROM_SIZE]>>,
     rom_bank_0: Box<[u8; ROM_BANK_0_SIZE]>,
     rom_bank_n: Box<[u8; ROM_BANK_N_SIZE]>,
+    wram: Box<[u8; WRAM_SIZE]>,
     pub gpu: Gpu,
     hram: Box<[u8; HRAM_SIZE]>,
 }
@@ -55,6 +60,7 @@ impl MemoryBus {
                 .into_boxed_slice()
                 .try_into()
                 .expect("ROM to have bank n"),
+            wram: vec![0; WRAM_SIZE].into_boxed_slice().try_into().unwrap(),
             hram: vec![0; HRAM_SIZE].into_boxed_slice().try_into().unwrap(),
         }
     }
@@ -73,6 +79,7 @@ impl MemoryBus {
                 .map_or_else(|| self.rom_bank_0[address], |boot_rom| boot_rom[address]),
             ROM_BANK_0_BEGIN..=ROM_BANK_0_END => self.rom_bank_0[address],
             ROM_BANK_N_BEGIN..=ROM_BANK_N_END => self.rom_bank_n[address - ROM_BANK_N_BEGIN],
+            WRAM_BEGIN..=WRAM_END => self.wram[address - WRAM_BEGIN],
             VRAM_BEGIN..=VRAM_END => self.gpu.read_vram(address - VRAM_BEGIN),
             IO_BEGIN..=IO_END => self.read_io_register(address),
             HRAM_BEGIN..HRAM_END => self.hram[address - HRAM_BEGIN],
@@ -83,6 +90,7 @@ impl MemoryBus {
         let address = address as usize;
         match address {
             ROM_BANK_0_BEGIN..=ROM_BANK_N_END => panic!("attempted to write to ROM"),
+            WRAM_BEGIN..=WRAM_END => self.wram[address - WRAM_BEGIN] = value,
             VRAM_BEGIN..=VRAM_END => self.gpu.write_vram(address - VRAM_BEGIN, value),
             IO_BEGIN..=IO_END => self.write_io_register(address, value),
             HRAM_BEGIN..HRAM_END => self.hram[address - HRAM_BEGIN] = value,
