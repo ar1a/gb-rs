@@ -237,7 +237,7 @@ impl Cpu {
                 }
             },
             Instruction::Arithmetic(alu, source) => match alu {
-                Alu::Add => {
+                Alu::Add | Alu::Adc => {
                     let value = match source {
                         RegisterOrImmediate::Register(register) => {
                             let value = self.match_register(register);
@@ -247,9 +247,9 @@ impl Cpu {
                         RegisterOrImmediate::Immediate(value) => value,
                     };
                     debug_context!(self, insert at 0, "A = {:02X}", self.registers.a);
-                    self.registers.a = self.add(value);
+                    self.registers.a = self.add(value, alu == Alu::Adc);
                     debug_context!(self, insert at 1, "A' = {:02X}", self.registers.a);
-                    print_debug!(self, "ADD {source}");
+                    print_debug!(self, "{alu} {source}");
 
                     match source {
                         RegisterOrImmediate::Immediate(_) => (self.pc.wrapping_add(2), 8),
@@ -675,15 +675,20 @@ impl Cpu {
         }
     }
 
-    fn add(&mut self, value: u8) -> u8 {
+    fn add(&mut self, value: u8, add_carry: bool) -> u8 {
+        let carry = u8::from(add_carry && self.registers.f.contains(Flags::Carry));
+        if add_carry {
+            debug_context!(self, "C = {carry}");
+        }
         let (new_value, overflow) = self.registers.a.overflowing_add(value);
+        let (new_value, overflow2) = new_value.overflowing_add(carry);
         self.set_flag(Flags::Zero, new_value == 0);
         self.registers.f.remove(Flags::Subtraction);
-        self.set_flag(Flags::Carry, overflow);
+        self.set_flag(Flags::Carry, overflow || overflow2);
         // HalfCarry is set if the lower 4 bits added together don't fit in the lower 4 bits
         self.set_flag(
             Flags::HalfCarry,
-            (self.registers.a & 0b1111) + (value & 0b1111) > 0b1111,
+            (self.registers.a & 0b1111) + (value & 0b1111) + carry > 0b1111,
         );
         new_value
     }

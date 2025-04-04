@@ -156,15 +156,23 @@ pub enum Register16Alt {
     AF,
 }
 
-#[derive(Debug, FromPrimitive, Clone, Copy)]
+#[derive(Debug, FromPrimitive, Clone, Copy, PartialEq, Eq, Display)]
 pub enum Alu {
+    #[display("ADD")]
     Add,
+    #[display("ADC")]
     Adc,
+    #[display("SUB")]
     Sub,
+    #[display("SBC")]
     Sbc,
+    #[display("AND")]
     And,
+    #[display("XOR")]
     Xor,
+    #[display("OR")]
     Or,
+    #[display("CP")]
     Cp,
 }
 
