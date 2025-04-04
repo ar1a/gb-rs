@@ -210,6 +210,14 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 7 => (i, Instruction::Ei),
                 _ => panic!("non-existent instruction: {}", unreachable()),
             },
+            4 => match y {
+                0..=3 => {
+                    let (i, address) = le_u16().parse(i)?;
+                    let condition = JumpTest::from_u8(y).unwrap();
+                    (i, Instruction::Call(condition, address))
+                }
+                _ => panic!("non-existent instruction: {}", unreachable()),
+            },
             5 => match q {
                 0 => {
                     let reg = Register16Alt::from_u8(p).unwrap();
