@@ -33,6 +33,7 @@ fn main() -> eyre::Result<()> {
                 .from_env_lossy(),
         )
         .init();
+
     let buffer = Arc::new(Mutex::new(vec![0; WIDTH * HEIGHT * 3]));
     let gui_buffer = Arc::clone(&buffer);
     let gui_thread = std::thread::spawn(move || {

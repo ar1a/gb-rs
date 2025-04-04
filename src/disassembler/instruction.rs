@@ -21,6 +21,7 @@ pub enum Instruction {
     Rrca,
     Rla,
     Rra,
+    Nop,
 }
 
 #[derive(Debug, Clone, Copy)]

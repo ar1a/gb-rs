@@ -35,6 +35,7 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
     Ok(match x {
         0 => match z {
             0 => match y {
+                0 => (i, Instruction::Nop),
                 3 => {
                     let (i, relative) = le_i8().parse(i)?;
                     (i, Instruction::JR(JumpTest::Always, relative))

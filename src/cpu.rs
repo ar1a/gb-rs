@@ -462,6 +462,10 @@ impl Cpu {
                 print_debug!(self, "RLA");
                 (self.pc.wrapping_add(1), 4)
             }
+            Instruction::Nop => {
+                print_debug!(self, "NOP");
+                (self.pc.wrapping_add(1), 4)
+            }
             _ => todo!("unimplemented instruction: {:?}", instruction),
         }
     }
