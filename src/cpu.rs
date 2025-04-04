@@ -514,6 +514,19 @@ impl Cpu {
                         _ => (self.pc.wrapping_add(2), 8),
                     }
                 }
+                Rot::Srl | Rot::Sra => {
+                    let value = self.match_register(register);
+                    debug_context!(self, "{register} = {value:02X}");
+                    let new_value = self.shift_right(value, rot == Rot::Sra);
+                    self.write_register(register, new_value);
+                    debug_context!(self, insert at 1, "{register}' = {new_value:02X}");
+                    print_debug!(self, "{rot} {register}");
+
+                    match register {
+                        Register::HLIndirect => (self.pc.wrapping_add(2), 16),
+                        _ => (self.pc.wrapping_add(2), 8),
+                    }
+                }
                 _ => todo!("unimplemented instruction: {:?}", instruction),
             },
             Instruction::Rla => {
@@ -762,6 +775,20 @@ impl Cpu {
 
         debug_context!(self, "C = {carry}");
         self.set_flag(Flags::Carry, value >> 7 == 1);
+
+        new_value
+    }
+
+    fn shift_right(&mut self, value: u8, preserve_msb: bool) -> u8 {
+        let mask = if preserve_msb { value & 0b1000_0000 } else { 0 };
+        let new_value = (value >> 1) | mask;
+
+        self.set_flag(Flags::Zero, new_value == 0);
+        // set carry if we shifted a bit off
+        self.set_flag(Flags::Carry, value & 1 == 1);
+        self.registers
+            .f
+            .remove(make_bitflags!(Flags::{Subtraction | HalfCarry}));
 
         new_value
     }

@@ -168,14 +168,22 @@ pub enum Alu {
     Cp,
 }
 
-#[derive(Debug, FromPrimitive, Clone, Copy)]
+#[derive(Debug, FromPrimitive, Clone, Copy, PartialEq, Eq, Display)]
 pub enum Rot {
+    #[display("RLC")]
     Rlc,
+    #[display("RRC")]
     Rrc,
+    #[display("RL")]
     Rl,
+    #[display("RR")]
     Rr,
+    #[display("SLA")]
     Sla,
+    #[display("SRA")]
     Sra,
+    #[display("SWAP")]
     Swap,
+    #[display("SRL")]
     Srl,
 }
