@@ -40,7 +40,7 @@ enum TileMapSelect {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LCDControl {
     DisplayEnabled = 1 << 7,
-    // On = 0x9C00, Off = 0x9800
+    /// On = 0x9C00, Off = 0x9800
     WindowTileMap = 1 << 6,
     WindowEnabled = 1 << 5,
     /// On = 0x8000, Off = 0x8800
@@ -69,6 +69,8 @@ pub struct Gpu {
 
 trait LCDExt {
     fn bg_tilemap_address(&self) -> usize;
+    fn tile_data_address(&self) -> usize;
+    fn window_tilemap_address(&self) -> usize;
 }
 impl LCDExt for BitFlags<LCDControl> {
     fn bg_tilemap_address(&self) -> usize {
@@ -76,6 +78,22 @@ impl LCDExt for BitFlags<LCDControl> {
             0x9C00
         } else {
             0x9800
+        }
+    }
+
+    fn window_tilemap_address(&self) -> usize {
+        if self.contains(LCDControl::WindowTileMap) {
+            0x9C00
+        } else {
+            0x9800
+        }
+    }
+
+    fn tile_data_address(&self) -> usize {
+        if self.contains(LCDControl::TileDataSelect) {
+            0x8000
+        } else {
+            0x8800
         }
     }
 }
