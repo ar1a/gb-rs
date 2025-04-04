@@ -1,15 +1,15 @@
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Timer {
     pub timer_control: u8,
 }
 
 impl Timer {
-    pub const fn is_enabled(&self) -> bool {
+    pub const fn is_enabled(self) -> bool {
         self.timer_control & 0b100 == 0b100
     }
 
     /// Returns the clock speed in Hz
-    pub fn clock_speed(&self) -> u32 {
+    pub const fn clock_speed(self) -> u32 {
         const M_CYCLES_PER_SECOND: u32 = 0x10_0000; // 1,048,576
         let clock_select = self.timer_control & 0b11;
         M_CYCLES_PER_SECOND
