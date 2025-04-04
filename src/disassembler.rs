@@ -180,13 +180,18 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                         Instruction::Ld(LoadType::LastByteAddress(COrImmediate::C, direction)),
                     )
                 }
-                5 => {
+                5 | 7 => {
+                    let direction = match y {
+                        5 => Direction::FromA,
+                        7 => Direction::IntoA,
+                        _ => unreachable!(),
+                    };
                     let (i, address) = le_u16().parse(i)?;
                     (
                         i,
                         Instruction::Ld(LoadType::Indirect(
                             LoadIndirect::Immediate(address),
-                            Direction::FromA,
+                            direction,
                         )),
                     )
                 }
