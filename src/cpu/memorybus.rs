@@ -60,7 +60,7 @@ pub enum InterruptFlag {
 }
 
 impl MemoryBus {
-    pub fn new(boot_rom: Option<&[u8; 256]>, game_rom: &[u8]) -> Self {
+    pub fn new(boot_rom: Option<&[u8; 256]>, game_rom: &[u8], test_mode: bool) -> Self {
         let boot_rom = boot_rom.map(|rom| Box::new(rom.to_owned()));
         Self {
             gpu: Gpu::default(),
@@ -81,7 +81,7 @@ impl MemoryBus {
 
             interrupt_flag: BitFlags::EMPTY,
             interrupt_enabled: BitFlags::EMPTY,
-            test_mode: false,
+            test_mode,
         }
     }
 

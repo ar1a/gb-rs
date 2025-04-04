@@ -55,7 +55,7 @@ macro_rules! print_debug {
 }
 
 impl Cpu {
-    pub fn new(boot_rom: Option<&[u8; 256]>, game_rom: &[u8]) -> Self {
+    pub fn new(boot_rom: Option<&[u8; 256]>, game_rom: &[u8], test_mode: bool) -> Self {
         // FIXME: support running without boot_rom
         // this will need us to set the registers to a good state
         match boot_rom {
@@ -63,7 +63,7 @@ impl Cpu {
                 registers: Registers::default(),
                 pc: 0,
                 sp: 0,
-                bus: MemoryBus::new(boot_rom, game_rom),
+                bus: MemoryBus::new(boot_rom, game_rom, test_mode),
                 interrupts_enabled: false,
                 debug_bytes_consumed: Vec::default(),
                 debug_context: Vec::default(),
@@ -81,7 +81,7 @@ impl Cpu {
                 },
                 pc: 0x100,
                 sp: 0xFFFE,
-                bus: MemoryBus::new(boot_rom, game_rom),
+                bus: MemoryBus::new(boot_rom, game_rom, test_mode),
                 interrupts_enabled: false,
                 debug_bytes_consumed: Vec::default(),
                 debug_context: Vec::default(),
@@ -934,7 +934,7 @@ mod test {
     fn test_boot_rom() {
         let boot_rom = include_bytes!("../dmg_boot.bin");
         let test_rom = include_bytes!("../test_roms/cpu_instrs/individual/01-special.gb");
-        let mut cpu = Cpu::new(Some(boot_rom), test_rom);
+        let mut cpu = Cpu::new(Some(boot_rom), test_rom, false);
         while cpu.pc < 0x100 {
             cpu.step();
         }

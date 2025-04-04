@@ -78,7 +78,7 @@ fn main() -> eyre::Result<()> {
             None
         };
         let test_rom = include_bytes!("../test_roms/cpu_instrs/individual/04-op r,imm.gb");
-        let mut cpu = Cpu::new(boot_rom, test_rom);
+        let mut cpu = Cpu::new(boot_rom, test_rom, args.log);
         let mut f = if args.log {
             Some(BufWriter::new(File::create("log.txt").unwrap()))
         } else {
@@ -91,7 +91,6 @@ fn main() -> eyre::Result<()> {
                 .unwrap()
                 .write_all(&cpu.format_state().into_bytes())
                 .unwrap_or_else(|e| warn!("failed to write to buffer {e}"));
-            cpu.bus.test_mode = true;
         }
 
         let cycles_per_second = 4_190_000;
