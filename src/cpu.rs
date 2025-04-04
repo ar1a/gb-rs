@@ -725,7 +725,7 @@ impl Cpu {
         let (new_value, overflow) = hl.overflowing_add(value);
 
         self.set_flag(Flags::Carry, overflow);
-        let mask = 0b111_1111_1111;
+        let mask = 0b1111_1111_1111;
         self.set_flag(Flags::HalfCarry, (hl & mask) + (value & mask) > mask);
         self.registers.f.remove(Flags::Subtraction);
 
