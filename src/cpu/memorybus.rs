@@ -1,7 +1,10 @@
 use bitvec::array::BitArray;
 use enumflags2::BitFlag;
 
-use crate::gpu::{Gpu, LCDControl, VRAM_BEGIN, VRAM_END};
+use crate::{
+    gpu::{Gpu, LCDControl, VRAM_BEGIN, VRAM_END},
+    timer::Timer,
+};
 
 pub const BOOT_ROM_BEGIN: usize = 0x00;
 pub const BOOT_ROM_END: usize = 0xFF;
@@ -34,6 +37,7 @@ pub struct MemoryBus {
     rom_bank_n: Box<[u8; ROM_BANK_N_SIZE]>,
     wram: Box<[u8; WRAM_SIZE]>,
     pub gpu: Gpu,
+    pub timer: Timer,
     hram: Box<[u8; HRAM_SIZE]>,
 }
 
@@ -49,6 +53,7 @@ impl MemoryBus {
         });
         Self {
             gpu: Gpu::default(),
+            timer: Timer::default(),
             boot_rom,
             rom_bank_0: game_rom[..ROM_BANK_0_SIZE]
                 .to_owned()
@@ -120,6 +125,7 @@ impl MemoryBus {
     #[allow(clippy::match_same_arms)]
     fn write_io_register(&mut self, address: usize, value: u8) {
         match address {
+            0xFF07 => self.timer.timer_control = value,
             0xFF11 => { /* Sound Ch1 Length Timer and Duty Cycle */ }
             0xFF12 => { /* Sound Ch1 Volume and Envelope */ }
             0xFF13 => { /* Sound Ch1 Period Low */ }
