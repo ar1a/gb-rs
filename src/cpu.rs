@@ -600,6 +600,13 @@ impl Cpu {
                 self.interrupts_enabled = true;
                 (self.pc.wrapping_add(1), 4)
             }
+            Instruction::Daa => {
+                debug_context!(self, "A = {}", self.registers.a);
+                self.registers.a = self.daa();
+                debug_context!(self, insert at 1, "A' = {}", self.registers.a);
+                print_debug!(self, "DAA");
+                (self.pc.wrapping_add(1), 4)
+            }
             _ => todo!("unimplemented instruction: {:?}", instruction),
         }
     }
@@ -870,6 +877,40 @@ impl Cpu {
         self.registers
             .f
             .remove(make_bitflags!(Flags::{Subtraction | HalfCarry}));
+
+        new_value
+    }
+
+    fn daa(&mut self) -> u8 {
+        // thanks to <https://ehaskins.com/2018-01-30%20Z80%20DAA/>
+        let value = self.registers.a;
+        let half_carry = self.registers.f.contains(Flags::HalfCarry);
+        let carry = self.registers.f.contains(Flags::Carry);
+        let subtraction = self.registers.f.contains(Flags::Subtraction);
+
+        // adjust first digit
+        let adjust = if half_carry || (!subtraction && value & 0xF > 0x9) {
+            0x6
+        } else {
+            0
+        };
+        // adjust second digit
+        let adjust = if carry || (!subtraction && value > 0x99) {
+            adjust + 0x60
+        } else {
+            adjust
+        };
+
+        let new_value = if subtraction {
+            value.wrapping_sub(adjust)
+        } else {
+            value.wrapping_add(adjust)
+        };
+
+        self.set_flag(Flags::Zero, new_value == 0);
+        self.registers
+            .set_flag(Flags::Carry, carry || (!subtraction && value > 0x99));
+        self.registers.f.remove(Flags::HalfCarry);
 
         new_value
     }

@@ -26,6 +26,7 @@ pub enum Instruction {
     Di,
     Ei,
     Nop,
+    Daa,
 }
 
 #[derive(Debug, Clone, Copy)]

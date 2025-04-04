@@ -116,6 +116,7 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 1 => (i, Instruction::Rrca),
                 2 => (i, Instruction::Rla),
                 3 => (i, Instruction::Rra),
+                4 => (i, Instruction::Daa),
                 _ => nyi(),
             },
             _ => unreachable!("{}", unreachable()),
