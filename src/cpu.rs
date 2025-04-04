@@ -236,6 +236,15 @@ impl Cpu {
                     }
                 }
             },
+            Instruction::AddHl(register) => {
+                let value = self.match_register16(register);
+                debug_context!(self, "HL = {:04X}", self.registers.hl());
+                let new_value = self.add_hl(value);
+                self.registers.set_hl(new_value);
+                debug_context!(self, insert at 1, "HL' = {:04X}", self.registers.hl());
+                print_debug!(self, "ADD HL, {register}");
+                (self.pc.wrapping_add(1), 8)
+            }
             Instruction::Arithmetic(alu, source) => match alu {
                 Alu::Add | Alu::Adc => {
                     let value = match source {
@@ -693,6 +702,18 @@ impl Cpu {
             Flags::HalfCarry,
             (self.registers.a & 0b1111) + (value & 0b1111) + carry > 0b1111,
         );
+        new_value
+    }
+
+    fn add_hl(&mut self, value: u16) -> u16 {
+        let hl = self.registers.hl();
+        let (new_value, overflow) = hl.overflowing_add(value);
+
+        self.set_flag(Flags::Carry, overflow);
+        let mask = 0b111_1111_1111;
+        self.set_flag(Flags::HalfCarry, (hl & mask) + (value & mask) > mask);
+        self.registers.f.remove(Flags::Subtraction);
+
         new_value
     }
 

@@ -63,7 +63,10 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                         Instruction::Ld(LoadType::Word(reg, LoadWordSource::Immediate(target))),
                     )
                 }
-                1 => nyi(),
+                1 => {
+                    let reg = Register16::from_u8(p).unwrap();
+                    (i, Instruction::AddHl(reg))
+                }
                 _ => unreachable!("{}", unreachable()),
             },
             2 => {

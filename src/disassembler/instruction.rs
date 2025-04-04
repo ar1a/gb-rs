@@ -6,6 +6,7 @@ use parse_display::Display;
 pub enum Instruction {
     Ld(LoadType),
     Arithmetic(Alu, RegisterOrImmediate),
+    AddHl(Register16),
     Bit(u8, Register),
     JR(JumpTest, i8),
     JP(JumpTest, HLOrImmediate),
