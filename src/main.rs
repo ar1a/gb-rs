@@ -32,9 +32,10 @@ const fn from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
 struct Args {
     #[arg(short, long)]
     log: bool,
-
     #[arg(short, long)]
     use_boot_rom: bool,
+    #[arg(short, long)]
+    fast: bool,
 }
 
 fn main() -> eyre::Result<()> {
@@ -137,7 +138,9 @@ fn main() -> eyre::Result<()> {
                 warn!("lagging by {:?}", next_frame.elapsed());
             }
 
-            std::thread::sleep_until(next_frame);
+            if !args.fast {
+                std::thread::sleep_until(next_frame);
+            }
             next_frame += frame_duration;
         }
     });
