@@ -24,6 +24,7 @@ pub struct Cpu {
     pub pc: u16,
     pub sp: u16,
     pub bus: MemoryBus,
+    pub interrupts_enabled: bool,
 
     debug_bytes_consumed: Vec<u8>,
     // Optionally used
@@ -40,6 +41,7 @@ impl Cpu {
             pc: 0,
             sp: 0,
             bus: MemoryBus::new(boot_rom, game_rom),
+            interrupts_enabled: false,
             debug_bytes_consumed: Vec::default(),
             debug_context: Vec::default(),
         }
@@ -481,6 +483,17 @@ impl Cpu {
             }
             Instruction::Nop => {
                 print_debug!(self, "NOP");
+                (self.pc.wrapping_add(1), 4)
+            }
+            Instruction::Di => {
+                print_debug!(self, "DI");
+                self.interrupts_enabled = false;
+                (self.pc.wrapping_add(1), 4)
+            }
+            Instruction::Ei => {
+                print_debug!(self, "EI");
+                // FIXME: enabled after the next machine cycle?
+                self.interrupts_enabled = true;
                 (self.pc.wrapping_add(1), 4)
             }
             _ => todo!("unimplemented instruction: {:?}", instruction),

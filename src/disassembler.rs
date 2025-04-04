@@ -201,7 +201,9 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                     )
                 }
                 1 => prefixed_instruction(i)?,
-                _ => nyi(),
+                6 => (i, Instruction::Di),
+                7 => (i, Instruction::Ei),
+                _ => panic!("non-existent instruction: {}", unreachable()),
             },
             5 => match q {
                 0 => {
