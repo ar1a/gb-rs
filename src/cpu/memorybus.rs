@@ -85,7 +85,7 @@ impl MemoryBus {
             WRAM_BEGIN..=WRAM_END => self.wram[address - WRAM_BEGIN],
             VRAM_BEGIN..=VRAM_END => self.gpu.read_vram(address - VRAM_BEGIN),
             IO_BEGIN..=IO_END => self.read_io_register(address),
-            HRAM_BEGIN..HRAM_END => self.hram[address - HRAM_BEGIN],
+            HRAM_BEGIN..=HRAM_END => self.hram[address - HRAM_BEGIN],
             _ => todo!("memory region not readable yet: {:#4x}", address),
         }
     }
@@ -96,7 +96,7 @@ impl MemoryBus {
             WRAM_BEGIN..=WRAM_END => self.wram[address - WRAM_BEGIN] = value,
             VRAM_BEGIN..=VRAM_END => self.gpu.write_vram(address - VRAM_BEGIN, value),
             IO_BEGIN..=IO_END => self.write_io_register(address, value),
-            HRAM_BEGIN..HRAM_END => self.hram[address - HRAM_BEGIN] = value,
+            HRAM_BEGIN..=HRAM_END => self.hram[address - HRAM_BEGIN] = value,
             _ => todo!("memory region not writable yet: {:#4x}", address),
         }
     }
