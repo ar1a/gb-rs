@@ -281,6 +281,29 @@ impl Cpu {
                         RegisterOrImmediate::Register(_) => (self.pc.wrapping_add(1), 4),
                     }
                 }
+                Alu::And => {
+                    let value = match source {
+                        RegisterOrImmediate::Register(register) => {
+                            let value = self.match_register(register);
+                            if !matches!(register, Register::A) {
+                                debug_context!(self, "{register} = {value:02X}");
+                            }
+                            value
+                        }
+                        RegisterOrImmediate::Immediate(value) => value,
+                    };
+
+                    debug_context!(self, "A = {:02X}", self.registers.a);
+                    self.registers.a = self.and(value);
+                    print_debug!(self, "AND {source}");
+                    match source {
+                        RegisterOrImmediate::Immediate(_) => (self.pc.wrapping_add(2), 8),
+                        RegisterOrImmediate::Register(Register::HLIndirect) => {
+                            (self.pc.wrapping_add(1), 8)
+                        }
+                        RegisterOrImmediate::Register(_) => (self.pc.wrapping_add(1), 4),
+                    }
+                }
                 Alu::Or => {
                     let value = match source {
                         RegisterOrImmediate::Register(register) => {
@@ -628,6 +651,17 @@ impl Cpu {
             Flags::HalfCarry,
             (self.registers.a & 0b1111) + (value & 0b1111) > 0b1111,
         );
+        new_value
+    }
+
+    fn and(&mut self, value: u8) -> u8 {
+        let new_value = self.registers.a & value;
+        debug_context!(self, "A' = {new_value:02X}");
+        self.set_flag(Flags::Zero, new_value == 0);
+        self.registers
+            .f
+            .remove(make_bitflags!(Flags::{Subtraction | Carry}));
+        self.set_flag(Flags::HalfCarry, true);
         new_value
     }
 
