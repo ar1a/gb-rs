@@ -174,11 +174,20 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 }
                 1 => match p {
                     0 => (i, Instruction::Ret(JumpTest::Always)),
+                    2 => (i, Instruction::JP(JumpTest::Always, HLOrImmediate::HL)),
                     _ => nyi(),
                 },
                 _ => unreachable!("{}", unreachable()),
             },
             2 => match y {
+                0..4 => {
+                    let (i, address) = le_u16().parse(i)?;
+                    let condition = JumpTest::from_u8(y).unwrap();
+                    (
+                        i,
+                        Instruction::JP(condition, HLOrImmediate::Immediate(address)),
+                    )
+                }
                 4 | 6 => {
                     let direction = match y {
                         4 => Direction::FromA,
