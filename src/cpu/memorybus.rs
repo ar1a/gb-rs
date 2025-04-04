@@ -143,6 +143,8 @@ impl MemoryBus {
     #[allow(clippy::match_same_arms)]
     fn write_io_register(&mut self, address: usize, value: u8) {
         match address {
+            0xFF01 => { /* Serial transfer data */ }
+            0xFF02 => { /* Serial transfer control */ }
             0xFF07 => self.timer.timer_control = value,
             0xFF0F => self.interrupt_flag = BitFlags::from_bits_truncate(value),
             0xFF11 => { /* Sound Ch1 Length Timer and Duty Cycle */ }
