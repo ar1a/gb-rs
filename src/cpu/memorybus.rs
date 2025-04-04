@@ -69,9 +69,7 @@ impl MemoryBus {
             hram: vec![0; HRAM_SIZE].into_boxed_slice().try_into().unwrap(),
         }
     }
-}
 
-impl MemoryBus {
     pub fn read_byte(&self, address: u16) -> u8 {
         const ROM_BANK_0_BEGIN: usize = BOOT_ROM_END + 1; // shadowed so that the match statement
         // doesn't have overlapping ranges

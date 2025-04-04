@@ -31,23 +31,6 @@ pub struct Cpu {
     debug_context: Vec<String>,
 }
 
-impl Cpu {
-    pub fn new(boot_rom: Option<&[u8]>, game_rom: &[u8]) -> Self {
-        // FIXME: support running without boot_rom
-        // this will need us to set the registers to a good state
-        assert!(boot_rom.is_some());
-        Self {
-            registers: Registers::default(),
-            pc: 0,
-            sp: 0,
-            bus: MemoryBus::new(boot_rom, game_rom),
-            interrupts_enabled: false,
-            debug_bytes_consumed: Vec::default(),
-            debug_context: Vec::default(),
-        }
-    }
-}
-
 macro_rules! debug_context {
     ($self:ident, insert at $index:literal, $($tt:tt)*) => {
         #[cfg(debug_assertions)]
@@ -72,6 +55,21 @@ macro_rules! print_debug {
 }
 
 impl Cpu {
+    pub fn new(boot_rom: Option<&[u8]>, game_rom: &[u8]) -> Self {
+        // FIXME: support running without boot_rom
+        // this will need us to set the registers to a good state
+        assert!(boot_rom.is_some());
+        Self {
+            registers: Registers::default(),
+            pc: 0,
+            sp: 0,
+            bus: MemoryBus::new(boot_rom, game_rom),
+            interrupts_enabled: false,
+            debug_bytes_consumed: Vec::default(),
+            debug_context: Vec::default(),
+        }
+    }
+
     pub fn step(&mut self) -> u8 {
         self.debug_context.clear();
         let slice = self.bus.slice_from(self.pc);
