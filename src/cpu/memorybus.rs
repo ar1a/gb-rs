@@ -44,6 +44,8 @@ pub struct MemoryBus {
     pub interrupt_flag: BitFlags<InterruptFlag>,
     /// Controls whether the interrupt handler may be called
     pub interrupt_enabled: BitFlags<InterruptFlag>,
+    /// If set, stub out 0xFF44 to return 90 always
+    pub test_mode: bool,
 }
 
 #[bitflags]
@@ -58,15 +60,8 @@ pub enum InterruptFlag {
 }
 
 impl MemoryBus {
-    pub fn new(boot_rom: Option<&[u8]>, game_rom: &[u8]) -> Self {
-        let boot_rom = boot_rom.map(|rom| {
-            rom.to_owned()
-                .into_boxed_slice()
-                .try_into()
-                .unwrap_or_else(|_| {
-                    panic!("Boot ROM to be size {BOOT_ROM_SIZE} (is {})", rom.len())
-                })
-        });
+    pub fn new(boot_rom: Option<&[u8; 256]>, game_rom: &[u8]) -> Self {
+        let boot_rom = boot_rom.map(|rom| Box::new(rom.to_owned()));
         Self {
             gpu: Gpu::default(),
             timer: Timer::default(),
@@ -86,6 +81,7 @@ impl MemoryBus {
 
             interrupt_flag: BitFlags::EMPTY,
             interrupt_enabled: BitFlags::EMPTY,
+            test_mode: false,
         }
     }
 
@@ -135,7 +131,13 @@ impl MemoryBus {
             0xFF40 => self.gpu.lcd_control.bits(),
             0xFF42 => self.gpu.scroll_y,
             0xFF43 => self.gpu.scroll_x,
-            0xFF44 => self.gpu.line,
+            0xFF44 => {
+                if self.test_mode {
+                    0x90
+                } else {
+                    self.gpu.line
+                }
+            }
             _ => todo!("implement io register read {address:04X}"),
         }
     }

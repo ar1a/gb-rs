@@ -1,0 +1,3 @@
+[submodule "gameboy-doctor"]
+	path = gameboy-doctor
+	url = https://github.com/robert/gameboy-doctor.git

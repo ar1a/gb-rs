@@ -55,18 +55,37 @@ macro_rules! print_debug {
 }
 
 impl Cpu {
-    pub fn new(boot_rom: Option<&[u8]>, game_rom: &[u8]) -> Self {
+    pub fn new(boot_rom: Option<&[u8; 256]>, game_rom: &[u8]) -> Self {
         // FIXME: support running without boot_rom
         // this will need us to set the registers to a good state
-        assert!(boot_rom.is_some());
-        Self {
-            registers: Registers::default(),
-            pc: 0,
-            sp: 0,
-            bus: MemoryBus::new(boot_rom, game_rom),
-            interrupts_enabled: false,
-            debug_bytes_consumed: Vec::default(),
-            debug_context: Vec::default(),
+        match boot_rom {
+            Some(_) => Self {
+                registers: Registers::default(),
+                pc: 0,
+                sp: 0,
+                bus: MemoryBus::new(boot_rom, game_rom),
+                interrupts_enabled: false,
+                debug_bytes_consumed: Vec::default(),
+                debug_context: Vec::default(),
+            },
+            None => Self {
+                registers: Registers {
+                    a: 0x01,
+                    b: 0x00,
+                    c: 0x13,
+                    d: 0x00,
+                    e: 0xD8,
+                    h: 0x01,
+                    l: 0x4D,
+                    f: make_bitflags!(Flags::{Carry | HalfCarry | Zero}),
+                },
+                pc: 0x100,
+                sp: 0xFFFE,
+                bus: MemoryBus::new(boot_rom, game_rom),
+                interrupts_enabled: false,
+                debug_bytes_consumed: Vec::default(),
+                debug_context: Vec::default(),
+            },
         }
     }
 
@@ -85,11 +104,11 @@ impl Cpu {
         cycles
     }
 
-    fn format_state(&self) -> String {
+    pub fn format_state(&self) -> String {
         format!(
-            "A:{:02X} F:{:0>4b} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}\nAF:{:04x} BC:{:04x} DE:{:04x} HL:{:04x}",
+            "A:{:02X} F:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}\n",
             self.registers.a,
-            self.registers.f.bits() >> 4,
+            self.registers.f.bits(),
             self.registers.b,
             self.registers.c,
             self.registers.d,
@@ -102,10 +121,6 @@ impl Cpu {
             self.bus.read_byte(self.pc + 1),
             self.bus.read_byte(self.pc + 2),
             self.bus.read_byte(self.pc + 3),
-            self.registers.af(),
-            self.registers.bc(),
-            self.registers.de(),
-            self.registers.hl()
         )
     }
 

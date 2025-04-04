@@ -1,9 +1,12 @@
 #![feature(thread_sleep_until)]
 use std::{
+    fs::File,
+    io::{BufWriter, Write as _},
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 
+use clap::Parser;
 use jane_eyre::eyre::{self, eyre};
 use minifb::{Key, Window, WindowOptions};
 use tracing::{debug, warn};
@@ -24,6 +27,16 @@ const fn from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
     (r << 16) | (g << 8) | b
 }
 
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(short, long)]
+    log: bool,
+
+    #[arg(short, long)]
+    use_boot_rom: bool,
+}
+
 fn main() -> eyre::Result<()> {
     jane_eyre::install()?;
     tracing_subscriber::registry()
@@ -34,6 +47,8 @@ fn main() -> eyre::Result<()> {
                 .from_env_lossy(),
         )
         .init();
+
+    let args = Args::parse();
 
     let buffer = Arc::new(Mutex::new(vec![0; WIDTH * HEIGHT * 3]));
     let gui_buffer = Arc::clone(&buffer);
@@ -57,9 +72,27 @@ fn main() -> eyre::Result<()> {
     });
 
     let _ = std::thread::spawn(move || {
-        let boot_rom = include_bytes!("../dmg_boot.bin");
+        let boot_rom = if args.use_boot_rom {
+            Some(include_bytes!("../dmg_boot.bin"))
+        } else {
+            None
+        };
         let test_rom = include_bytes!("../test_roms/cpu_instrs/individual/01-special.gb");
-        let mut cpu = Cpu::new(Some(boot_rom), test_rom);
+        let mut cpu = Cpu::new(boot_rom, test_rom);
+        let mut f = if args.log {
+            Some(BufWriter::new(File::create("log.txt").unwrap()))
+        } else {
+            None
+        };
+
+        if args.log {
+            // log initial state
+            f.as_mut()
+                .unwrap()
+                .write_all(&cpu.format_state().into_bytes())
+                .unwrap_or_else(|e| warn!("failed to write to buffer {e}"));
+            cpu.bus.test_mode = true;
+        }
 
         let cycles_per_second = 4_190_000;
         let frame_duration = Duration::from_secs_f64(1.0 / 60.0);
@@ -74,11 +107,26 @@ fn main() -> eyre::Result<()> {
                 let cycles = cpu.step();
                 cycles_elapsed += u32::from(cycles);
 
+                if args.log && cycles > 0 {
+                    f.as_mut()
+                        .unwrap()
+                        .write_all(&cpu.format_state().into_bytes())
+                        .unwrap_or_else(|e| warn!("failed to write to buffer {e}"));
+                }
+
                 if cpu.bus.gpu.mode == Mode::HBlank && last_mode != Mode::HBlank {
                     let mut buffer = buffer.lock().unwrap();
                     buffer.copy_from_slice(&*cpu.bus.gpu.buffer);
                 }
                 last_mode = cpu.bus.gpu.mode;
+            }
+
+            if args.log {
+                // flush after every 1/60th burst
+                f.as_mut()
+                    .unwrap()
+                    .flush()
+                    .unwrap_or_else(|e| warn!("failed to flush to file {e}"));
             }
 
             debug!(
