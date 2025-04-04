@@ -146,7 +146,7 @@ impl MemoryBus {
             0xFF01 => { /* Serial transfer data */ }
             0xFF02 => { /* Serial transfer control */ }
             0xFF07 => self.timer.timer_control = value,
-            0xFF0F => self.interrupt_flag = BitFlags::from_bits_truncate(value),
+            0xFF0F => self.interrupt_flag = BitFlags::from_bits(value).unwrap(),
             0xFF11 => { /* Sound Ch1 Length Timer and Duty Cycle */ }
             0xFF12 => { /* Sound Ch1 Volume and Envelope */ }
             0xFF13 => { /* Sound Ch1 Period Low */ }
@@ -159,7 +159,7 @@ impl MemoryBus {
             0xFF43 => self.gpu.scroll_x = value,
             0xFF47 => self.gpu.background_colours = BitArray::new([value]),
             0xFF50 => self.boot_rom = None,
-            0xFFFF => self.interrupt_enabled = BitFlags::from_bits_truncate(value),
+            0xFFFF => self.interrupt_enabled = BitFlags::from_bits(value).unwrap(),
             _ => todo!("implement io register write {address:04X}"),
         }
     }
