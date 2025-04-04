@@ -283,7 +283,7 @@ impl Cpu {
                         RegisterOrImmediate::Register(_) => (self.pc.wrapping_add(1), 4),
                     }
                 }
-                Alu::Sub => {
+                Alu::Sub | Alu::Sbc => {
                     let value = match source {
                         RegisterOrImmediate::Register(register) => {
                             let value = self.match_register(register);
@@ -293,9 +293,9 @@ impl Cpu {
                         RegisterOrImmediate::Immediate(value) => value,
                     };
                     debug_context!(self, insert at 0, "A = {:02X}", self.registers.a);
-                    self.registers.a = self.sub(value);
+                    self.registers.a = self.sub(value, alu == Alu::Sbc);
                     debug_context!(self, insert at 1, "A' = {:02X}", self.registers.a);
-                    print_debug!(self, "SUB {source}");
+                    print_debug!(self, "{alu} {source}");
 
                     match source {
                         RegisterOrImmediate::Immediate(_) => (self.pc.wrapping_add(2), 8),
@@ -393,7 +393,6 @@ impl Cpu {
                         RegisterOrImmediate::Register(_) => (self.pc.wrapping_add(1), 4),
                     }
                 }
-                Alu::Sbc => todo!("alu opertion: {:?} {:?}", alu, source),
             },
             Instruction::Bit(bit, source) => {
                 let value = self.match_register(source);
@@ -770,15 +769,20 @@ impl Cpu {
         new_value
     }
 
-    fn sub(&mut self, value: u8) -> u8 {
+    fn sub(&mut self, value: u8, sub_carry: bool) -> u8 {
+        let carry = u8::from(sub_carry && self.registers.f.contains(Flags::Carry));
+        if sub_carry {
+            debug_context!(self, "C = {carry}");
+        }
         let (new_value, overflow) = self.registers.a.overflowing_sub(value);
+        let (new_value, overflow2) = new_value.overflowing_sub(carry);
 
         self.set_flag(Flags::Zero, new_value == 0);
         self.registers.f.insert(Flags::Subtraction);
-        self.set_flag(Flags::Carry, overflow);
+        self.set_flag(Flags::Carry, overflow || overflow2);
         self.set_flag(
             Flags::HalfCarry,
-            (self.registers.a & 0b1111) < (value & 0b1111),
+            (self.registers.a & 0b1111) < (value & 0b1111) + carry,
         );
         new_value
     }
