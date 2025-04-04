@@ -14,7 +14,7 @@ pub enum Instruction {
     Dec(Register),
     Dec16(Register16),
     Call(JumpTest, u16),
-    Ret,
+    Ret(JumpTest),
     Push(Register16Alt),
     Pop(Register16Alt),
     Rot(Rot, Register),
@@ -123,7 +123,7 @@ pub enum JumpTest {
     NotCarry,
     #[display("C,")]
     Carry,
-    // Not possible in DGM using FromPrimitive
+    // Not possible in DMG using FromPrimitive
     #[display("")]
     Always,
 }

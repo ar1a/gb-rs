@@ -143,6 +143,10 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
         }
         3 => match z {
             0 => match y {
+                0..4 => {
+                    let condition = JumpTest::from_u8(y).unwrap();
+                    (i, Instruction::Ret(condition))
+                }
                 4 | 6 => {
                     let (i, value) = le_u8().parse(i)?;
                     let direction = match y {
@@ -166,7 +170,7 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                     (i, Instruction::Pop(reg))
                 }
                 1 => match p {
-                    0 => (i, Instruction::Ret),
+                    0 => (i, Instruction::Ret(JumpTest::Always)),
                     _ => nyi(),
                 },
                 _ => unreachable!("{}", unreachable()),

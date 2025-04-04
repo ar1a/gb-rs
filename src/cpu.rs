@@ -369,7 +369,7 @@ impl Cpu {
                         RegisterOrImmediate::Register(_) => (self.pc.wrapping_add(1), 4),
                     }
                 }
-                _ => todo!("alu opertion: {:?} {:?}", alu, source),
+                Alu::Sbc => todo!("alu opertion: {:?} {:?}", alu, source),
             },
             Instruction::Bit(bit, source) => {
                 let value = self.match_register(source);
@@ -468,13 +468,16 @@ impl Cpu {
                 print_debug!(self, "CALL {condition} {address:04X}");
                 pc
             }
-            Instruction::Ret => {
+            Instruction::Ret(condition) => {
+                let should_return = self.match_jump_condition(condition);
                 let address = self.bus.read_word(self.sp);
                 debug_context!(self, "(SP) = {address:04X}");
-                let pc = self.retn(true);
-                print_debug!(self, ["RET"], [""]);
-                // TODO: conditional rets should use `retn`s returned cycles
-                (pc.0, 16)
+                let pc = self.retn(should_return);
+                print_debug!(self, "RET {condition}");
+                match condition {
+                    JumpTest::Always => (pc.0, 16),
+                    _ => pc,
+                }
             }
             Instruction::Push(register) => {
                 let value = match register {
