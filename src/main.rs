@@ -141,7 +141,7 @@ fn main() -> eyre::Result<()> {
             if !args.fast {
                 std::thread::sleep_until(next_frame);
             }
-            next_frame += frame_duration;
+            next_frame = Instant::now() + frame_duration;
         }
     });
 
