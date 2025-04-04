@@ -46,7 +46,7 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                     let (i, relative) = le_i8().parse(i)?;
                     (i, Instruction::JR(JumpTest::Always, relative))
                 }
-                4..7 => {
+                4..8 => {
                     let condition = JumpTest::from_u8(y - 4).unwrap();
                     let (i, relative) = le_i8().parse(i)?;
                     (i, Instruction::JR(condition, relative))
