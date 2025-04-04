@@ -13,7 +13,11 @@ use crate::disassembler::instruction::HLOrImmediate;
 
 pub mod instruction;
 
-#[allow(clippy::many_single_char_names, clippy::too_many_lines)]
+#[allow(
+    clippy::many_single_char_names,
+    clippy::too_many_lines,
+    clippy::cognitive_complexity
+)]
 pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
     // based on <https://gb-archive.github.io/salvage/decoding_gbz80_opcodes/Decoding%20Gamboy%20Z80%20Opcodes.html>
     let (i, byte) = nom::bytes::complete::take(1usize).parse(i)?;
@@ -114,7 +118,8 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
             _ => unreachable!("{}", unreachable()),
         },
         1 => match z {
-            0..6 | 7 => {
+            6 if y == 6 => nyi(),
+            0..8 => {
                 let target = Register::from_u8(y).unwrap();
                 let source = Register::from_u8(z).unwrap();
 
@@ -126,7 +131,6 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                     )),
                 )
             }
-            6 => nyi(),
             _ => unreachable!("{}", unreachable()),
         },
         2 => {
