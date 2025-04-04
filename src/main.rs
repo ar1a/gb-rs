@@ -66,7 +66,7 @@ fn main() -> eyre::Result<()> {
 
         let mut next_frame = Instant::now() + frame_duration;
         let mut last_mode = cpu.bus.gpu.mode;
-        while cpu.pc < 0x100 {
+        loop {
             // do 60 bursts of cycles per second
             let mut cycles_elapsed = 0;
             while cycles_elapsed < target_cycles {

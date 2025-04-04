@@ -8,6 +8,7 @@ pub enum Instruction {
     Arithmetic(Alu, RegisterOrImmediate),
     Bit(u8, Register),
     JR(JumpTest, i8),
+    JP(JumpTest, HLOrImmediate),
     Inc(Register),
     Inc16(Register16),
     Dec(Register),
@@ -30,6 +31,13 @@ pub enum LoadType {
     Byte(Register, RegisterOrImmediate),
     Word(Register16, LoadWordSource),
     LastByteAddress(COrImmediate, Direction),
+}
+
+#[derive(Debug, Clone, Copy, Display)]
+pub enum HLOrImmediate {
+    HL,
+    #[display("{0:04X}")]
+    Immediate(u16),
 }
 
 #[derive(Debug, Clone, Copy, Display)]

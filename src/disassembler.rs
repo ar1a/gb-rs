@@ -9,6 +9,8 @@ use nom::{
 };
 use num_traits::FromPrimitive as _;
 
+use crate::disassembler::instruction::HLOrImmediate;
+
 pub mod instruction;
 
 #[allow(clippy::many_single_char_names, clippy::too_many_lines)]
@@ -191,6 +193,13 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 _ => nyi(),
             },
             3 => match y {
+                0 => {
+                    let (i, address) = le_u16().parse(i)?;
+                    (
+                        i,
+                        Instruction::JP(JumpTest::Always, HLOrImmediate::Immediate(address)),
+                    )
+                }
                 1 => prefixed_instruction(i)?,
                 _ => nyi(),
             },

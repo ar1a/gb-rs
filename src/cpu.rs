@@ -8,7 +8,7 @@ use tracing::trace;
 
 use crate::disassembler::{
     instruction::{
-        Alu, COrImmediate, Direction, Instruction, JumpTest, LoadIndirect, LoadType,
+        Alu, COrImmediate, Direction, HLOrImmediate, Instruction, JumpTest, LoadIndirect, LoadType,
         LoadWordSource, Register, Register16, Register16Alt, RegisterOrImmediate, Rot,
     },
     parse_instruction,
@@ -350,6 +350,23 @@ impl Cpu {
 
                 self.relative_jump(should_jump, relative)
             }
+            Instruction::JP(condition, target) => {
+                let should_jump = self.match_jump_condition(condition);
+                let address = match target {
+                    HLOrImmediate::HL => {
+                        let address = self.registers.hl();
+                        debug_context!(self, "HL = {address:04X}");
+                        address
+                    }
+                    HLOrImmediate::Immediate(address) => address,
+                };
+                print_debug!(self, "JP {condition} {target}");
+                match target {
+                    // there is no conditional HL jump, only conditional immediate
+                    HLOrImmediate::HL => (address, 4),
+                    HLOrImmediate::Immediate(_) => self.jump(should_jump, address),
+                }
+            }
             Instruction::Inc(register) => {
                 let value = self.match_register(register);
                 debug_context!(self, "{register} = {value:02X}");
@@ -630,6 +647,11 @@ impl Cpu {
         } else {
             (pc, 8)
         }
+    }
+
+    const fn jump(&self, should_jump: bool, address: u16) -> (u16, u8) {
+        let pc = self.pc.wrapping_add(3);
+        if should_jump { (address, 16) } else { (pc, 12) }
     }
 
     fn inc(&mut self, value: u8) -> u8 {
