@@ -1,6 +1,6 @@
 use instruction::{
-    Alu, COrImmediate, Direction, Instruction, JumpTest, LoadIndirect, LoadType, LoadWordSource,
-    Register, Register16, Register16Alt, RegisterOrImmediate, Rot,
+    Alu, COrImmediate, Direction, Instruction, JumpTest, LoadIndirect, LoadType, Register,
+    Register16, Register16Alt, RegisterOrImmediate, Rot,
 };
 use nom::{
     IResult, Parser, bits,
@@ -42,6 +42,13 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
         0 => match z {
             0 => match y {
                 0 => (i, Instruction::Nop),
+                1 => {
+                    let (i, address) = le_u16().parse(i)?;
+                    (
+                        i,
+                        Instruction::Ld(LoadType::FromSp(HLOrImmediate::Immediate(address), 0)),
+                    )
+                }
                 3 => {
                     let (i, relative) = le_i8().parse(i)?;
                     (i, Instruction::JR(JumpTest::Always, relative))
@@ -60,7 +67,7 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
 
                     (
                         i,
-                        Instruction::Ld(LoadType::Word(reg, LoadWordSource::Immediate(target))),
+                        Instruction::Ld(LoadType::Word(reg, HLOrImmediate::Immediate(target))),
                     )
                 }
                 1 => {
@@ -166,6 +173,17 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                         )),
                     )
                 }
+                5 => {
+                    let (i, offset) = le_i8().parse(i)?;
+                    (i, Instruction::AddSp(offset))
+                }
+                7 => {
+                    let (i, offset) = le_i8().parse(i)?;
+                    (
+                        i,
+                        Instruction::Ld(LoadType::FromSp(HLOrImmediate::HL, offset)),
+                    )
+                }
                 _ => nyi(),
             },
             1 => match q {
@@ -176,6 +194,10 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 1 => match p {
                     0 => (i, Instruction::Ret(JumpTest::Always)),
                     2 => (i, Instruction::JP(JumpTest::Always, HLOrImmediate::HL)),
+                    3 => (
+                        i,
+                        Instruction::Ld(LoadType::Word(Register16::SP, HLOrImmediate::HL)),
+                    ),
                     _ => nyi(),
                 },
                 _ => unreachable!("{}", unreachable()),

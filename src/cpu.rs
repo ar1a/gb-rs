@@ -9,7 +9,7 @@ use tracing::trace;
 use crate::disassembler::{
     instruction::{
         Alu, COrImmediate, Direction, HLOrImmediate, Instruction, JumpTest, LoadIndirect, LoadType,
-        LoadWordSource, Register, Register16, Register16Alt, RegisterOrImmediate, Rot,
+        Register, Register16, Register16Alt, RegisterOrImmediate, Rot,
     },
     parse_instruction,
 };
@@ -213,12 +213,14 @@ impl Cpu {
                 }
                 LoadType::Word(register, source) => {
                     let source_value = match source {
-                        LoadWordSource::Immediate(x) => x,
+                        HLOrImmediate::Immediate(x) => x,
+                        HLOrImmediate::HL => self.registers.hl(),
                     };
                     self.write_register16(register, source_value);
                     print_debug!(self, "LD {register}, {source_value:02X}");
                     match source {
-                        LoadWordSource::Immediate(_) => (self.pc.wrapping_add(3), 12),
+                        HLOrImmediate::Immediate(_) => (self.pc.wrapping_add(3), 12),
+                        HLOrImmediate::HL => (self.pc.wrapping_add(1), 8),
                     }
                 }
                 LoadType::LastByteAddress(source, direction) => {
@@ -250,6 +252,22 @@ impl Cpu {
                         COrImmediate::C => (self.pc.wrapping_add(1), 8),
                     }
                 }
+                LoadType::FromSp(target, offset) => match target {
+                    HLOrImmediate::Immediate(address) => {
+                        debug_context!(self, "SP = {}", self.sp);
+                        self.bus.write_word(address, self.sp);
+                        print_debug!(self, "LD ({address:04X}), SP");
+                        (self.pc.wrapping_add(3), 20)
+                    }
+                    HLOrImmediate::HL => {
+                        debug_context!(self, "SP = {}", self.sp);
+                        let value = self.add_signed(self.sp, offset);
+                        self.registers.set_hl(value);
+                        debug_context!(self, insert at 1, "HL' = {value:04X}");
+                        print_debug!(self, "LD HL, SP {offset:+}");
+                        (self.pc.wrapping_add(2), 12)
+                    }
+                },
             },
             Instruction::AddHl(register) => {
                 let value = self.match_register16(register);
@@ -259,6 +277,15 @@ impl Cpu {
                 debug_context!(self, insert at 1, "HL' = {:04X}", self.registers.hl());
                 print_debug!(self, "ADD HL, {register}");
                 (self.pc.wrapping_add(1), 8)
+            }
+            Instruction::AddSp(offset) => {
+                let value = self.sp;
+                debug_context!(self, "SP = {:04X}", self.sp);
+                let new_value = self.add_signed(value, offset);
+                self.sp = new_value;
+                debug_context!(self, insert at 1, "SP' = {:04X}", self.sp);
+                print_debug!(self, "ADD SP, {offset}");
+                (self.pc.wrapping_add(2), 16)
             }
             Instruction::Arithmetic(alu, source) => match alu {
                 Alu::Add | Alu::Adc => {
@@ -734,6 +761,27 @@ impl Cpu {
         let mask = 0b1111_1111_1111;
         self.set_flag(Flags::HalfCarry, (hl & mask) + (value & mask) > mask);
         self.registers.f.remove(Flags::Subtraction);
+
+        new_value
+    }
+
+    fn add_signed(&mut self, value: u16, offset: i8) -> u16 {
+        let offset = i16::from(offset);
+        let new_value = value.wrapping_add_signed(offset);
+        let mask = 0b1111;
+        let mask_signed = 0b1111;
+        self.set_flag(
+            Flags::HalfCarry,
+            (value & mask).wrapping_add_signed(offset & mask_signed) > mask,
+        );
+        // annoyingly, carry and half carry are set as if it was 8-bit, not 16-bit
+        let mask = 0b1111_1111;
+        let mask_signed = 0b1111_1111;
+        self.set_flag(
+            Flags::Carry,
+            (value & mask).wrapping_add_signed(offset & mask_signed) > mask,
+        );
+        self.registers.f.remove(Flags::Subtraction | Flags::Zero);
 
         new_value
     }

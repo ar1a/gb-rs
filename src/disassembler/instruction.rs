@@ -7,6 +7,7 @@ pub enum Instruction {
     Ld(LoadType),
     Arithmetic(Alu, RegisterOrImmediate),
     AddHl(Register16),
+    AddSp(i8),
     Bit(u8, Register),
     JR(JumpTest, i8),
     JP(JumpTest, HLOrImmediate),
@@ -33,8 +34,9 @@ pub enum Instruction {
 pub enum LoadType {
     Indirect(LoadIndirect, Direction),
     Byte(Register, RegisterOrImmediate),
-    Word(Register16, LoadWordSource),
+    Word(Register16, HLOrImmediate),
     LastByteAddress(COrImmediate, Direction),
+    FromSp(HLOrImmediate, i8),
 }
 
 #[derive(Debug, Clone, Copy, Display)]
@@ -102,11 +104,6 @@ pub enum Direction {
 #[derive(Debug, Clone, Copy)]
 pub enum LoadByteSource {
     Value(u8),
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum LoadWordSource {
-    Immediate(u16),
 }
 
 #[derive(Debug, Clone, Copy)]
