@@ -31,12 +31,6 @@ pub enum Flags {
     /// Set when something overflows
     #[display("C")]
     Carry = 0b0001_0000,
-
-    // Here so that setting AF doesn't drop these 4 bits
-    Dummy3 = 0b1000,
-    Dummy2 = 0b0100,
-    Dummy1 = 0b0010,
-    Dummy0 = 0b0001,
 }
 
 impl Registers {
@@ -55,7 +49,7 @@ impl Registers {
     pub fn set_af(&mut self, value: u16) {
         let [f, a] = value.to_le_bytes();
         self.a = a;
-        self.f = Flags::from_bits(f).unwrap();
+        self.f = Flags::from_bits_truncate(f);
     }
 
     pub const fn de(&self) -> u16 {
