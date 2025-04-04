@@ -514,6 +514,19 @@ impl Cpu {
                         _ => (self.pc.wrapping_add(2), 8),
                     }
                 }
+                Rot::Rr => {
+                    let value = self.match_register(register);
+                    debug_context!(self, "{register} = {value:02X}");
+                    let new_value = self.rotate_right_through_carry(value, true);
+                    self.write_register(register, new_value);
+                    debug_context!(self, insert at 1, "{register}' = {new_value:02X}");
+                    print_debug!(self, "RR {register}");
+
+                    match register {
+                        Register::HLIndirect => (self.pc.wrapping_add(2), 16),
+                        _ => (self.pc.wrapping_add(2), 8),
+                    }
+                }
                 Rot::Srl | Rot::Sra => {
                     let value = self.match_register(register);
                     debug_context!(self, "{register} = {value:02X}");
@@ -535,6 +548,14 @@ impl Cpu {
                 debug_context!(self, insert at 1, "A' = {:02X}", self.registers.a);
 
                 print_debug!(self, "RLA");
+                (self.pc.wrapping_add(1), 4)
+            }
+            Instruction::Rra => {
+                debug_context!(self, "A = {:02X}", self.registers.a);
+                self.registers.a = self.rotate_right_through_carry(self.registers.a, false);
+                debug_context!(self, insert at 1, "A' = {:02X}", self.registers.a);
+
+                print_debug!(self, "RRA");
                 (self.pc.wrapping_add(1), 4)
             }
             Instruction::Nop => {
@@ -775,6 +796,22 @@ impl Cpu {
 
         debug_context!(self, "C = {carry}");
         self.set_flag(Flags::Carry, value >> 7 == 1);
+
+        new_value
+    }
+
+    fn rotate_right_through_carry(&mut self, value: u8, set_zero: bool) -> u8 {
+        let carry = u8::from(self.registers.f.contains(Flags::Carry));
+        let new_value = value >> 1 | carry << 7;
+
+        self.set_flag(Flags::Zero, new_value == 0 && set_zero);
+
+        self.registers
+            .f
+            .remove(make_bitflags!(Flags::{Subtraction | HalfCarry}));
+
+        debug_context!(self, "C = {carry}");
+        self.set_flag(Flags::Carry, value & 1 == 1);
 
         new_value
     }
