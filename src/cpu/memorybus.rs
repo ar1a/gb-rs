@@ -1,5 +1,5 @@
 use bitvec::array::BitArray;
-use enumflags2::BitFlag;
+use enumflags2::{BitFlag, BitFlags, bitflags};
 
 use crate::{
     gpu::{Gpu, LCDControl, VRAM_BEGIN, VRAM_END},
@@ -39,6 +39,22 @@ pub struct MemoryBus {
     pub gpu: Gpu,
     pub timer: Timer,
     hram: Box<[u8; HRAM_SIZE]>,
+
+    /// Controls whether the interrupt handler is being requested
+    pub interrupt_flag: BitFlags<InterruptFlag>,
+    /// Controls whether the interrupt handler may be called
+    pub interrupt_enabled: BitFlags<InterruptFlag>,
+}
+
+#[bitflags]
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InterruptFlag {
+    VBlank = 1 << 0,
+    Lcd = 1 << 1,
+    Timer = 1 << 2,
+    Serial = 1 << 3,
+    Joypad = 1 << 4,
 }
 
 impl MemoryBus {
@@ -67,6 +83,9 @@ impl MemoryBus {
                 .expect("ROM to have bank n"),
             wram: vec![0; WRAM_SIZE].into_boxed_slice().try_into().unwrap(),
             hram: vec![0; HRAM_SIZE].into_boxed_slice().try_into().unwrap(),
+
+            interrupt_flag: BitFlags::EMPTY,
+            interrupt_enabled: BitFlags::EMPTY,
         }
     }
 
@@ -84,7 +103,7 @@ impl MemoryBus {
             ROM_BANK_N_BEGIN..=ROM_BANK_N_END => self.rom_bank_n[address - ROM_BANK_N_BEGIN],
             WRAM_BEGIN..=WRAM_END => self.wram[address - WRAM_BEGIN],
             VRAM_BEGIN..=VRAM_END => self.gpu.read_vram(address - VRAM_BEGIN),
-            IO_BEGIN..=IO_END => self.read_io_register(address),
+            IO_BEGIN..=IO_END | 0xFFFF => self.read_io_register(address),
             HRAM_BEGIN..=HRAM_END => self.hram[address - HRAM_BEGIN],
             _ => todo!("memory region not readable yet: {:#4x}", address),
         }
@@ -95,7 +114,7 @@ impl MemoryBus {
             ROM_BANK_0_BEGIN..=ROM_BANK_N_END => panic!("attempted to write to ROM"),
             WRAM_BEGIN..=WRAM_END => self.wram[address - WRAM_BEGIN] = value,
             VRAM_BEGIN..=VRAM_END => self.gpu.write_vram(address - VRAM_BEGIN, value),
-            IO_BEGIN..=IO_END => self.write_io_register(address, value),
+            IO_BEGIN..=IO_END | 0xFFFF => self.write_io_register(address, value),
             HRAM_BEGIN..=HRAM_END => self.hram[address - HRAM_BEGIN] = value,
             _ => todo!("memory region not writable yet: {:#4x}", address),
         }
@@ -124,6 +143,7 @@ impl MemoryBus {
     fn write_io_register(&mut self, address: usize, value: u8) {
         match address {
             0xFF07 => self.timer.timer_control = value,
+            0xFF0F => self.interrupt_flag = BitFlags::from_bits_truncate(value),
             0xFF11 => { /* Sound Ch1 Length Timer and Duty Cycle */ }
             0xFF12 => { /* Sound Ch1 Volume and Envelope */ }
             0xFF13 => { /* Sound Ch1 Period Low */ }
@@ -135,6 +155,7 @@ impl MemoryBus {
             0xFF42 => self.gpu.scroll_y = value,
             0xFF47 => self.gpu.background_colours = BitArray::new([value]),
             0xFF50 => self.boot_rom = None,
+            0xFFFF => self.interrupt_enabled = BitFlags::from_bits_truncate(value),
             _ => todo!("implement io register write {address:04X}"),
         }
     }
