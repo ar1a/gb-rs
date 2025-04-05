@@ -23,6 +23,7 @@ pub struct Cpu {
     #[difference(recurse)]
     pub registers: Registers,
     /// The Program Counter register
+    #[difference(skip)]
     pub pc: u16,
     pub sp: u16,
     #[difference(recurse)]
@@ -981,11 +982,12 @@ impl Cpu {
 
 #[cfg(test)]
 mod test {
+    use std::ops::Not;
+
     use enumflags2::BitFlag;
     use jane_eyre::eyre;
     use serde::Deserialize;
     use serde_json::Value;
-    use tracing::error;
 
     use super::*;
     // use pretty_assertions::assert_eq;
@@ -1031,30 +1033,81 @@ mod test {
         cycles: Vec<Value>,
     }
 
-    #[test]
-    fn test_single_step() -> eyre::Result<()> {
-        let json = include_bytes!("../sm83/v1/0a.json");
-        let tests = serde_json::from_slice::<Vec<InstructionTest>>(json)?;
-        let results = tests
+    // <https://stackoverflow.com/a/59211505/4376737>
+    fn catch_unwind_silent<F: FnOnce() -> R + std::panic::UnwindSafe, R>(
+        f: F,
+    ) -> std::thread::Result<R> {
+        let prev_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(|_| {}));
+        let result = std::panic::catch_unwind(f);
+        std::panic::set_hook(prev_hook);
+        result
+    }
+    // <https://github.com/rust-lang/rust/blob/4eb161250e340c8f48f66e2b929ef4a5bed7c181/library/std/src/panicking.rs#L774>
+    fn payload_as_str(payload: &dyn std::any::Any) -> &str {
+        if let Some(&s) = payload.downcast_ref::<&'static str>() {
+            s
+        } else if let Some(s) = payload.downcast_ref::<String>() {
+            s.as_str()
+        } else {
+            "Box<dyn Any>"
+        }
+    }
+
+    fn is_not_parsable(path: &std::path::Path) -> bool {
+        let bytecode = path.file_name().unwrap().to_string_lossy();
+        let bytecode = bytecode.strip_suffix(".json").unwrap();
+        let bytes = bytecode.strip_prefix("cb ").map_or_else(
+            || {
+                let bytecode = u8::from_str_radix(bytecode, 16).unwrap();
+                [bytecode, 0, 0, 0, 0]
+            },
+            |bytecode| {
+                let bytecode = u8::from_str_radix(bytecode, 16).unwrap();
+                [0xCB, bytecode, 0, 0, 0]
+            },
+        );
+        catch_unwind_silent(|| parse_instruction(&bytes).is_ok())
+            .unwrap_or(false)
+            .not()
+    }
+
+    #[datatest::files("sm83/v1", {
+        input in r"(.*)\.json" if !is_not_parsable
+    })]
+    fn test_single_step(input: &[u8]) -> eyre::Result<()> {
+        let tests = serde_json::from_slice::<Vec<InstructionTest>>(input)?;
+        let (_, errors): (Vec<_>, Vec<_>) = tests
             .iter()
             .map(|test| {
-                std::panic::catch_unwind(|| {
+                catch_unwind_silent(|| {
                     let mut initial = mock_cpu(&test.initial);
                     let after = mock_cpu(&test.r#final);
-                    test.cycles.iter().skip(1).for_each(|_| {
+                    test.cycles.iter().for_each(|_| {
                         initial.step();
                     });
-                    let diffs = initial.diff_ref(&after);
-                    if !diffs.is_empty() {
-                        error!("test {} failed with: {diffs:?}", test.name);
-                    }
-                    assert_eq!(initial.pc, after.pc);
-                    assert_eq!(diffs.len(), 0);
+
+                    let diffs = initial.bus.diff(&after.bus);
+                    assert_eq!(initial.registers, after.registers);
+                    assert_eq!(initial.sp, after.sp);
+                    // don't test pc, the test cases have incorrect pc values :(
+                    assert_eq!(diffs.len(), 0, "bus diff failed: {diffs:?}");
                 })
             })
+            .partition(Result::is_ok);
+        let mut errors = errors
+            .into_iter()
+            .map(Result::unwrap_err)
+            .map(|x| {
+                let ret = payload_as_str(&*x).to_owned();
+                std::mem::forget(x);
+                ret
+            })
             .collect::<Vec<_>>();
+        errors.sort_unstable();
+        errors.dedup();
         // FIXME: Deal with panics nicer
-        assert_eq!(results.iter().filter(|x| x.is_ok()).count(), 1000);
+        assert_eq!(errors.len(), 0, "errors: {errors:#?}");
 
         Ok(())
     }

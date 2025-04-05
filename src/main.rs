@@ -1,4 +1,6 @@
 #![feature(thread_sleep_until)]
+#![feature(custom_test_frameworks)]
+#![test_runner(datatest::runner)]
 use std::{
     fs::File,
     io::{BufWriter, Write as _},
