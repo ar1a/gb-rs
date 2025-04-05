@@ -1,8 +1,9 @@
 use enumflags2::{BitFlag as _, BitFlags, bitflags};
 use parse_display::Display;
+use structdiff::{Difference, StructDiff};
 
 /// Base registers
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Difference)]
 pub struct Registers {
     pub a: u8,
     pub b: u8,

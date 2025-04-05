@@ -10,6 +10,10 @@ pub const VRAM_BEGIN: usize = 0x8000;
 pub const VRAM_END: usize = 0x9FFF;
 pub const VRAM_SIZE: usize = VRAM_END - VRAM_BEGIN + 1;
 
+pub const OAM_BEGIN: usize = 0xFE00;
+pub const OAM_END: usize = 0xFE9F;
+pub const OAM_SIZE: usize = OAM_END - OAM_BEGIN + 1;
+
 pub const WIDTH: usize = 160;
 pub const HEIGHT: usize = 144;
 
@@ -52,9 +56,10 @@ pub enum LCDControl {
     BackgroundEnabled = 1 << 0,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Gpu {
     vram: [u8; VRAM_SIZE],
+    oam: [u8; OAM_SIZE],
     tile_set: [Tile; 384],
     pub buffer: Box<[u8; WIDTH * HEIGHT * 3]>,
     cycles: u16,
@@ -102,6 +107,7 @@ impl Default for Gpu {
     fn default() -> Self {
         Self {
             vram: [0; VRAM_SIZE],
+            oam: [0; OAM_SIZE],
             tile_set: [empty_tile(); 384],
             buffer: vec![0; WIDTH * HEIGHT * 3]
                 .into_boxed_slice()
@@ -187,6 +193,14 @@ impl Gpu {
         let row_index = (index % 16) / 2;
 
         self.tile_set[tile_index][row_index] = tile_row;
+    }
+
+    pub const fn read_oam(&self, address: usize) -> u8 {
+        self.oam[address]
+    }
+
+    pub const fn write_oam(&mut self, address: usize, value: u8) {
+        self.oam[address] = value;
     }
 
     #[allow(clippy::cast_possible_truncation, clippy::similar_names)]

@@ -4,6 +4,7 @@ use enumflags2::make_bitflags;
 use memorybus::MemoryBus;
 use registers::{Flags, Registers};
 use std::fmt::Write as _;
+use structdiff::{Difference, StructDiff};
 use tracing::trace;
 
 use crate::disassembler::{
@@ -17,17 +18,21 @@ use crate::disassembler::{
 pub mod memorybus;
 pub mod registers;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone, Difference)]
 pub struct Cpu {
+    #[difference(recurse)]
     pub registers: Registers,
     /// The Program Counter register
     pub pc: u16,
     pub sp: u16,
+    #[difference(recurse)]
     pub bus: MemoryBus,
     pub interrupts_enabled: bool,
 
+    #[difference(skip)]
     debug_bytes_consumed: Vec<u8>,
     // Optionally used
+    #[difference(skip)]
     debug_context: Vec<String>,
 }
 
@@ -976,7 +981,14 @@ impl Cpu {
 
 #[cfg(test)]
 mod test {
+    use enumflags2::BitFlag;
+    use jane_eyre::eyre;
+    use serde::Deserialize;
+    use serde_json::Value;
+    use tracing::error;
+
     use super::*;
+    // use pretty_assertions::assert_eq;
 
     #[test]
     fn test_boot_rom() {
@@ -986,5 +998,90 @@ mod test {
         while cpu.pc < 0x100 {
             cpu.step();
         }
+        // assert_eq!(cpu, Cpu::new(None, test_rom, false));
+        // FIXME: print the diff cleaner
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct RamState {
+        address: u16,
+        value: u8,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct GameboyState {
+        pc: u16,
+        sp: u16,
+        a: u8,
+        b: u8,
+        c: u8,
+        d: u8,
+        e: u8,
+        f: u8,
+        h: u8,
+        l: u8,
+        ram: Vec<RamState>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct InstructionTest {
+        name: String,
+        initial: GameboyState,
+        r#final: GameboyState,
+        cycles: Vec<Value>,
+    }
+
+    #[test]
+    fn test_single_step() -> eyre::Result<()> {
+        let json = include_bytes!("../sm83/v1/0a.json");
+        let tests = serde_json::from_slice::<Vec<InstructionTest>>(json)?;
+        let results = tests
+            .iter()
+            .map(|test| {
+                std::panic::catch_unwind(|| {
+                    let mut initial = mock_cpu(&test.initial);
+                    let after = mock_cpu(&test.r#final);
+                    test.cycles.iter().skip(1).for_each(|_| {
+                        initial.step();
+                    });
+                    let diffs = initial.diff_ref(&after);
+                    if !diffs.is_empty() {
+                        error!("test {} failed with: {diffs:?}", test.name);
+                    }
+                    assert_eq!(initial.pc, after.pc);
+                    assert_eq!(diffs.len(), 0);
+                })
+            })
+            .collect::<Vec<_>>();
+        // FIXME: Deal with panics nicer
+        assert_eq!(results.iter().filter(|x| x.is_ok()).count(), 1000);
+
+        Ok(())
+    }
+
+    fn mock_cpu(state: &GameboyState) -> Cpu {
+        let mut initial = Cpu {
+            registers: Registers {
+                a: state.a,
+                b: state.b,
+                c: state.c,
+                d: state.d,
+                e: state.e,
+                h: state.h,
+                l: state.l,
+                f: Flags::from_bits_truncate(state.f),
+            },
+            pc: state.pc,
+            sp: state.sp,
+            bus: MemoryBus::new(None, &[], false),
+            interrupts_enabled: false,
+            debug_bytes_consumed: Vec::new(),
+            debug_context: Vec::new(),
+        };
+        for write in &state.ram {
+            initial.bus.write_byte(write.address, write.value);
+        }
+
+        initial
     }
 }

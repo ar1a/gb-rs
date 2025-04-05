@@ -1,3 +1,6 @@
 [submodule "gameboy-doctor"]
 	path = gameboy-doctor
 	url = https://github.com/robert/gameboy-doctor.git
+[submodule "sm83"]
+	path = sm83
+	url = https://github.com/SingleStepTests/sm83.git
