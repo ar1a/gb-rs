@@ -1,8 +1,9 @@
 use bitvec::array::BitArray;
 use enumflags2::{BitFlag, BitFlags, bitflags};
+use tracing::warn;
 
 use crate::{
-    gpu::{Gpu, LCDControl, VRAM_BEGIN, VRAM_END},
+    gpu::{Gpu, LCDControl, OAM_BEGIN, OAM_END, VRAM_BEGIN, VRAM_END},
     timer::Timer,
 };
 
@@ -18,9 +19,15 @@ pub const ROM_BANK_N_BEGIN: usize = 0x4000;
 pub const ROM_BANK_N_END: usize = 0x7FFF;
 pub const ROM_BANK_N_SIZE: usize = ROM_BANK_N_END - ROM_BANK_N_BEGIN + 1;
 
+pub const EXTERNAL_RAM_BEGIN: usize = 0xA000;
+pub const EXTERNAL_RAM_END: usize = 0xBFFF;
+pub const EXTERNAL_RAM_SIZE: usize = EXTERNAL_RAM_END - EXTERNAL_RAM_BEGIN + 1;
+
 pub const WRAM_BEGIN: usize = 0xC000;
 pub const WRAM_END: usize = 0xDFFF;
 pub const WRAM_SIZE: usize = WRAM_END - WRAM_BEGIN + 1;
+pub const ECHO_RAM_BEGIN: usize = 0xE000;
+pub const ECHO_RAM_END: usize = 0xFDFF;
 
 pub const IO_BEGIN: usize = 0xFF00;
 pub const IO_END: usize = 0xFF7F;
@@ -35,6 +42,7 @@ pub struct MemoryBus {
     boot_rom: Option<Box<[u8; BOOT_ROM_SIZE]>>,
     rom_bank_0: Box<[u8; ROM_BANK_0_SIZE]>,
     rom_bank_n: Box<[u8; ROM_BANK_N_SIZE]>,
+    external_ram: Box<[u8; EXTERNAL_RAM_SIZE]>,
     wram: Box<[u8; WRAM_SIZE]>,
     pub gpu: Gpu,
     pub timer: Timer,
@@ -59,23 +67,37 @@ pub enum InterruptFlag {
     Joypad = 1 << 4,
 }
 
+fn copy_rom(buffer: &mut [u8; ROM_BANK_0_SIZE], slice: &[u8]) {
+    let n = std::cmp::min(buffer.len(), slice.len());
+    buffer[0..n].copy_from_slice(&slice[0..n]);
+}
+
 impl MemoryBus {
     pub fn new(boot_rom: Option<&[u8; 256]>, game_rom: &[u8], test_mode: bool) -> Self {
         let boot_rom = boot_rom.map(|rom| Box::new(rom.to_owned()));
+        let mut rom_bank_0: Box<[u8; ROM_BANK_0_SIZE]> = vec![0; ROM_BANK_0_SIZE]
+            .into_boxed_slice()
+            .try_into()
+            .unwrap();
+        let mut rom_bank_n: Box<[u8; ROM_BANK_N_SIZE]> = vec![0; ROM_BANK_N_SIZE]
+            .into_boxed_slice()
+            .try_into()
+            .unwrap();
+        copy_rom(&mut rom_bank_0, game_rom);
+        if game_rom.len() > ROM_BANK_N_BEGIN {
+            copy_rom(&mut rom_bank_n, &game_rom[ROM_BANK_N_BEGIN..]);
+        }
+
         Self {
             gpu: Gpu::default(),
             timer: Timer::default(),
             boot_rom,
-            rom_bank_0: game_rom[..ROM_BANK_0_SIZE]
-                .to_owned()
+            rom_bank_0,
+            rom_bank_n,
+            external_ram: vec![0; EXTERNAL_RAM_SIZE]
                 .into_boxed_slice()
                 .try_into()
-                .expect("ROM to have bank 0"),
-            rom_bank_n: game_rom[ROM_BANK_0_SIZE..ROM_BANK_0_SIZE + ROM_BANK_N_SIZE]
-                .to_owned()
-                .into_boxed_slice()
-                .try_into()
-                .expect("ROM to have bank n"),
+                .unwrap(),
             wram: vec![0; WRAM_SIZE].into_boxed_slice().try_into().unwrap(),
             hram: vec![0; HRAM_SIZE].into_boxed_slice().try_into().unwrap(),
 
@@ -97,7 +119,12 @@ impl MemoryBus {
                 .map_or_else(|| self.rom_bank_0[address], |boot_rom| boot_rom[address]),
             ROM_BANK_0_BEGIN..=ROM_BANK_0_END => self.rom_bank_0[address],
             ROM_BANK_N_BEGIN..=ROM_BANK_N_END => self.rom_bank_n[address - ROM_BANK_N_BEGIN],
+            EXTERNAL_RAM_BEGIN..=EXTERNAL_RAM_END => {
+                self.external_ram[address - EXTERNAL_RAM_BEGIN]
+            }
             WRAM_BEGIN..=WRAM_END => self.wram[address - WRAM_BEGIN],
+            ECHO_RAM_BEGIN..=ECHO_RAM_END => self.wram[address - ECHO_RAM_BEGIN],
+            OAM_BEGIN..=OAM_END => self.gpu.read_oam(address - OAM_BEGIN),
             VRAM_BEGIN..=VRAM_END => self.gpu.read_vram(address - VRAM_BEGIN),
             IO_BEGIN..=IO_END | 0xFFFF => self.read_io_register(address),
             HRAM_BEGIN..=HRAM_END => self.hram[address - HRAM_BEGIN],
@@ -107,8 +134,20 @@ impl MemoryBus {
     pub fn write_byte(&mut self, address: u16, value: u8) {
         let address = address as usize;
         match address {
-            ROM_BANK_0_BEGIN..=ROM_BANK_N_END => panic!("attempted to write to ROM"),
+            ROM_BANK_0_BEGIN..=ROM_BANK_0_END => {
+                warn!("attempted to write to ROM");
+                self.rom_bank_0[address] = value;
+            }
+            ROM_BANK_N_BEGIN..=ROM_BANK_N_END => {
+                warn!("attempted to write to ROM");
+                self.rom_bank_n[address - ROM_BANK_N_BEGIN] = value;
+            }
+            EXTERNAL_RAM_BEGIN..=EXTERNAL_RAM_END => {
+                self.external_ram[address - EXTERNAL_RAM_BEGIN] = value;
+            }
             WRAM_BEGIN..=WRAM_END => self.wram[address - WRAM_BEGIN] = value,
+            ECHO_RAM_BEGIN..=ECHO_RAM_END => self.wram[address - ECHO_RAM_BEGIN] = value,
+            OAM_BEGIN..=OAM_END => self.gpu.write_oam(address - OAM_BEGIN, value),
             VRAM_BEGIN..=VRAM_END => self.gpu.write_vram(address - VRAM_BEGIN, value),
             IO_BEGIN..=IO_END | 0xFFFF => self.write_io_register(address, value),
             HRAM_BEGIN..=HRAM_END => self.hram[address - HRAM_BEGIN] = value,
