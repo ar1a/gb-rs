@@ -61,7 +61,7 @@ pub struct MemoryBus {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InterruptFlag {
     VBlank = 1 << 0,
-    Lcd = 1 << 1,
+    LcdStat = 1 << 1,
     Timer = 1 << 2,
     Serial = 1 << 3,
     Joypad = 1 << 4,
@@ -167,6 +167,11 @@ impl MemoryBus {
 
     fn read_io_register(&self, address: usize) -> u8 {
         match address {
+            0xFF04 => self.timer.divider,
+            0xFF05 => self.timer.counter,
+            0xFF06 => self.timer.modulo,
+            0xFF07 => self.timer.control,
+            0xFF0F => self.interrupt_flag.bits(),
             0xFF40 => self.gpu.lcd_control.bits(),
             0xFF42 => self.gpu.scroll_y,
             0xFF43 => self.gpu.scroll_x,
@@ -177,6 +182,7 @@ impl MemoryBus {
                     self.gpu.line
                 }
             }
+            0xFFFF => self.interrupt_enabled.bits(),
             _ => todo!("implement io register read {address:04X}"),
         }
     }
@@ -186,7 +192,10 @@ impl MemoryBus {
         match address {
             0xFF01 => { /* Serial transfer data */ }
             0xFF02 => { /* Serial transfer control */ }
-            0xFF07 => self.timer.timer_control = value,
+            0xFF04 => self.timer.divider = 0,
+            0xFF05 => self.timer.counter = value,
+            0xFF06 => self.timer.modulo = value,
+            0xFF07 => self.timer.control = value,
             0xFF0F => self.interrupt_flag = BitFlags::from_bits(value).unwrap(),
             0xFF11 => { /* Sound Ch1 Length Timer and Duty Cycle */ }
             0xFF12 => { /* Sound Ch1 Volume and Envelope */ }
@@ -213,5 +222,30 @@ impl MemoryBus {
             self.read_byte(pc + 2),
             self.read_byte(pc + 3),
         ]
+    }
+
+    pub fn is_interrupt_dispatch_needed(&self) -> bool {
+        self.interrupt_enabled.intersects(self.interrupt_flag)
+    }
+
+    pub fn try_get_first_interrupt(&self) -> Option<InterruptFlag> {
+        let triggers = self.interrupt_enabled & self.interrupt_flag;
+        triggers.iter().next()
+    }
+    pub fn get_first_interrupt(&self) -> InterruptFlag {
+        self.try_get_first_interrupt()
+            .expect("IF and IE to have overlapping flags")
+    }
+
+    pub fn pop_interrupt_handler_address(&mut self) -> u16 {
+        let flag = self.get_first_interrupt();
+        self.interrupt_flag.remove(flag);
+        match flag {
+            InterruptFlag::VBlank => 0x40,
+            InterruptFlag::LcdStat => 0x48,
+            InterruptFlag::Timer => 0x50,
+            InterruptFlag::Serial => 0x58,
+            InterruptFlag::Joypad => 0x60,
+        }
     }
 }

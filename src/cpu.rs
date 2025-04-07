@@ -6,12 +6,15 @@ use registers::{Flags, Registers};
 use std::fmt::Write as _;
 use tracing::trace;
 
-use crate::disassembler::{
-    instruction::{
-        Alu, COrImmediate, Direction, HLOrImmediate, Instruction, JumpTest, LoadIndirect, LoadType,
-        Register, Register16, Register16Alt, RegisterOrImmediate, Rot,
+use crate::{
+    cpu::memorybus::InterruptFlag,
+    disassembler::{
+        instruction::{
+            Alu, COrImmediate, Direction, HLOrImmediate, Instruction, JumpTest, LoadIndirect,
+            LoadType, Register, Register16, Register16Alt, RegisterOrImmediate, Rot,
+        },
+        parse_instruction,
     },
-    parse_instruction,
 };
 
 pub mod memorybus;
@@ -94,23 +97,39 @@ impl Cpu {
 
     pub fn step(&mut self) -> u8 {
         self.debug_context.clear();
-        let slice = self.bus.slice_from(self.pc);
-        let (after, instruction) = parse_instruction(&slice).unwrap();
-        let bytes_consumed_len = slice.len() - after.len();
-        self.debug_bytes_consumed
-            .splice(.., slice[..bytes_consumed_len].iter().copied());
 
-        let (next_pc, cycles) = self.execute(instruction);
+        let (next_pc, cycles) =
+            if self.interrupts_enabled && self.bus.is_interrupt_dispatch_needed() {
+                self.push(self.pc);
+                self.interrupts_enabled = false;
+                trace!("interrupt triggered: {:?}", self.bus.get_first_interrupt());
+                (self.bus.pop_interrupt_handler_address(), 20)
+            } else {
+                let slice = self.bus.slice_from(self.pc);
+                let (after, instruction) = parse_instruction(&slice).unwrap();
+                let bytes_consumed_len = slice.len() - after.len();
+                self.debug_bytes_consumed
+                    .splice(.., slice[..bytes_consumed_len].iter().copied());
 
-        if self.interrupts_enabled_next {
-            self.interrupts_enabled_next = false;
-            self.interrupts_enabled = true;
-        }
-        if matches!(instruction, Instruction::Ei) {
-            self.interrupts_enabled_next = true;
-        }
+                let res = self.execute(instruction);
+
+                // FIXME: EI should be handled even if we're dispatching an interrupt, i think...
+                if self.interrupts_enabled_next {
+                    self.interrupts_enabled_next = false;
+                    self.interrupts_enabled = true;
+                }
+                if matches!(instruction, Instruction::Ei) {
+                    self.interrupts_enabled_next = true;
+                }
+
+                res
+            };
 
         self.bus.gpu.step(cycles);
+        if self.bus.timer.step(cycles) {
+            self.bus.interrupt_flag.insert(InterruptFlag::Timer);
+        }
+
         self.pc = next_pc;
         cycles
     }
