@@ -244,6 +244,9 @@ impl Cpu {
                     self.write_register(register, value);
                     match source {
                         RegisterOrImmediate::Immediate(_) => (self.pc.wrapping_add(2), 8),
+                        RegisterOrImmediate::Register(Register::HLIndirect) => {
+                            (self.pc.wrapping_add(1), 8)
+                        }
                         RegisterOrImmediate::Register(_) => (self.pc.wrapping_add(1), 4),
                     }
                 }
