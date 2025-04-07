@@ -176,6 +176,7 @@ impl MemoryBus {
             0xFF06 => self.timer.modulo,
             0xFF07 => self.timer.control,
             0xFF0F => self.interrupt_flag.bits(),
+            0xFF26 => 0,
             0xFF40 => self.gpu.lcd_control.bits(),
             0xFF42 => self.gpu.scroll_y,
             0xFF43 => self.gpu.scroll_x,
