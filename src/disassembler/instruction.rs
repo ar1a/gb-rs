@@ -135,7 +135,7 @@ pub enum JumpTest {
     Always,
 }
 
-#[derive(Debug, FromPrimitive, Clone, Copy, Display)]
+#[derive(Debug, FromPrimitive, Clone, Copy, Display, PartialEq, Eq)]
 pub enum Register {
     B,
     C,

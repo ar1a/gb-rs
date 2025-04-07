@@ -243,6 +243,9 @@ impl Cpu {
                     print_debug!(self, "LD {register}, {source}");
                     self.write_register(register, value);
                     match source {
+                        RegisterOrImmediate::Immediate(_) if register == Register::HLIndirect => {
+                            (self.pc.wrapping_add(2), 12)
+                        }
                         RegisterOrImmediate::Immediate(_) => (self.pc.wrapping_add(2), 8),
                         RegisterOrImmediate::Register(Register::HLIndirect) => {
                             (self.pc.wrapping_add(1), 8)
