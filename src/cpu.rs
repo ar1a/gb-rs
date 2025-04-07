@@ -589,6 +589,19 @@ impl Cpu {
                         _ => (self.pc.wrapping_add(2), 8),
                     }
                 }
+                Rot::Rlc => {
+                    let value = self.match_register(register);
+                    debug_context!(self, "{register} = {value:02X}");
+                    let new_value = self.rotate_left(value, true);
+                    self.write_register(register, new_value);
+                    debug_context!(self, insert at 1, "{register}' = {new_value:02X}");
+                    print_debug!(self, "RLC {register}");
+
+                    match register {
+                        Register::HLIndirect => (self.pc.wrapping_add(2), 16),
+                        _ => (self.pc.wrapping_add(2), 8),
+                    }
+                }
                 Rot::Rr => {
                     let value = self.match_register(register);
                     debug_context!(self, "{register} = {value:02X}");
@@ -596,6 +609,19 @@ impl Cpu {
                     self.write_register(register, new_value);
                     debug_context!(self, insert at 1, "{register}' = {new_value:02X}");
                     print_debug!(self, "RR {register}");
+
+                    match register {
+                        Register::HLIndirect => (self.pc.wrapping_add(2), 16),
+                        _ => (self.pc.wrapping_add(2), 8),
+                    }
+                }
+                Rot::Rrc => {
+                    let value = self.match_register(register);
+                    debug_context!(self, "{register} = {value:02X}");
+                    let new_value = self.rotate_right(value, true);
+                    self.write_register(register, new_value);
+                    debug_context!(self, insert at 1, "{register}' = {new_value:02X}");
+                    print_debug!(self, "RRC {register}");
 
                     match register {
                         Register::HLIndirect => (self.pc.wrapping_add(2), 16),
