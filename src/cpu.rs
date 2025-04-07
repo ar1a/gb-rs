@@ -599,6 +599,18 @@ impl Cpu {
                         _ => (self.pc.wrapping_add(2), 8),
                     }
                 }
+                Rot::Swap => {
+                    let value = self.match_register(register);
+                    debug_context!(self, "{register} = {value:02X}");
+                    let new_value = self.swap(value);
+                    self.write_register(register, new_value);
+                    debug_context!(self, insert at 1, "{register}' = {new_value:02X}");
+                    print_debug!(self, "SWAP {register}");
+                    match register {
+                        Register::HLIndirect => (self.pc.wrapping_add(2), 16),
+                        _ => (self.pc.wrapping_add(2), 8),
+                    }
+                }
                 _ => todo!("unimplemented instruction: {:?}", instruction),
             },
             Instruction::Rla => {
@@ -936,6 +948,15 @@ impl Cpu {
             .f
             .remove(make_bitflags!(Flags::{Subtraction | HalfCarry}));
 
+        new_value
+    }
+
+    fn swap(&mut self, value: u8) -> u8 {
+        let new_value = value.rotate_left(4);
+        self.set_flag(Flags::Zero, new_value == 0);
+        self.registers
+            .f
+            .remove(make_bitflags!(Flags::{Subtraction | Carry | HalfCarry}));
         new_value
     }
 
