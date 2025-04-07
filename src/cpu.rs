@@ -490,7 +490,7 @@ impl Cpu {
 
                 print_debug!(self, "RES {bit}, {source}");
                 match source {
-                    Register::HLIndirect => (self.pc.wrapping_add(2), 12),
+                    Register::HLIndirect => (self.pc.wrapping_add(2), 16),
                     _ => (self.pc.wrapping_add(2), 8),
                 }
             }
@@ -505,7 +505,7 @@ impl Cpu {
 
                 print_debug!(self, "SET {bit}, {source}");
                 match source {
-                    Register::HLIndirect => (self.pc.wrapping_add(2), 12),
+                    Register::HLIndirect => (self.pc.wrapping_add(2), 16),
                     _ => (self.pc.wrapping_add(2), 8),
                 }
             }
