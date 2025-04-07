@@ -68,7 +68,7 @@ impl Timer {
         let divider = if overflow {
             self.divider.wrapping_add(1)
         } else {
-            0
+            self.divider
         };
         (divider, counter)
     }
