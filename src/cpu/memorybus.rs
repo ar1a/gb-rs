@@ -4,6 +4,7 @@ use tracing::warn;
 
 use crate::{
     gpu::{Gpu, LCDControl, OAM_BEGIN, OAM_END, VRAM_BEGIN, VRAM_END},
+    joypad::Joypad,
     timer::Timer,
 };
 
@@ -46,6 +47,7 @@ pub struct MemoryBus {
     wram: Box<[u8; WRAM_SIZE]>,
     pub gpu: Gpu,
     pub timer: Timer,
+    pub joypad: Joypad,
     hram: Box<[u8; HRAM_SIZE]>,
 
     /// Controls whether the interrupt handler is being requested
@@ -91,6 +93,7 @@ impl MemoryBus {
         Self {
             gpu: Gpu::default(),
             timer: Timer::default(),
+            joypad: Joypad::default(),
             boot_rom,
             rom_bank_0,
             rom_bank_n,
@@ -167,6 +170,7 @@ impl MemoryBus {
 
     fn read_io_register(&self, address: usize) -> u8 {
         match address {
+            0xFF00 => self.joypad.read_joypad(),
             0xFF04 => self.timer.divider,
             0xFF05 => self.timer.counter,
             0xFF06 => self.timer.modulo,
@@ -190,6 +194,7 @@ impl MemoryBus {
     #[allow(clippy::match_same_arms)]
     fn write_io_register(&mut self, address: usize, value: u8) {
         match address {
+            0xFF00 => self.joypad.write_joypad(value),
             0xFF01 => { /* Serial transfer data */ }
             0xFF02 => { /* Serial transfer control */ }
             0xFF04 => self.timer.divider = 0,

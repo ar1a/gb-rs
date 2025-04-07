@@ -20,6 +20,8 @@ use crate::{
 mod cpu;
 mod disassembler;
 mod gpu;
+mod joypad;
+
 mod timer;
 
 const fn from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
@@ -78,7 +80,7 @@ fn main() -> eyre::Result<()> {
         } else {
             None
         };
-        let test_rom = include_bytes!("../test_roms/cpu_instrs/individual/02-interrupts.gb");
+        let test_rom = include_bytes!("../test_roms/instr_timing/instr_timing.gb");
         let mut cpu = Cpu::new(boot_rom, test_rom, args.log);
         let mut f = if args.log {
             Some(BufWriter::new(File::create("log.txt").unwrap()))
