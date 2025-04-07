@@ -25,6 +25,7 @@ pub struct Cpu {
     pub sp: u16,
     pub bus: MemoryBus,
     pub interrupts_enabled: bool,
+    interrupts_enabled_next: bool,
 
     debug_bytes_consumed: Vec<u8>,
     // Optionally used
@@ -65,6 +66,7 @@ impl Cpu {
                 sp: 0,
                 bus: MemoryBus::new(boot_rom, game_rom, test_mode),
                 interrupts_enabled: false,
+                interrupts_enabled_next: false,
                 debug_bytes_consumed: Vec::default(),
                 debug_context: Vec::default(),
             },
@@ -83,6 +85,7 @@ impl Cpu {
                 sp: 0xFFFE,
                 bus: MemoryBus::new(boot_rom, game_rom, test_mode),
                 interrupts_enabled: false,
+                interrupts_enabled_next: false,
                 debug_bytes_consumed: Vec::default(),
                 debug_context: Vec::default(),
             },
@@ -96,8 +99,16 @@ impl Cpu {
         let bytes_consumed_len = slice.len() - after.len();
         self.debug_bytes_consumed
             .splice(.., slice[..bytes_consumed_len].iter().copied());
+
         let (next_pc, cycles) = self.execute(instruction);
-        // eprintln!("{}", self.format_state()); // TODO: Log to a file instead
+
+        if self.interrupts_enabled_next {
+            self.interrupts_enabled_next = false;
+            self.interrupts_enabled = true;
+        }
+        if matches!(instruction, Instruction::Ei) {
+            self.interrupts_enabled_next = true;
+        }
 
         self.bus.gpu.step(cycles);
         self.pc = next_pc;
@@ -661,8 +672,7 @@ impl Cpu {
             }
             Instruction::Ei => {
                 print_debug!(self, "EI");
-                // FIXME: enabled after the next machine cycle?
-                self.interrupts_enabled = true;
+                // handled in self.step
                 (self.pc.wrapping_add(1), 4)
             }
             Instruction::Daa => {
