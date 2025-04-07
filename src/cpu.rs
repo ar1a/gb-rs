@@ -529,6 +529,12 @@ impl Cpu {
                     _ => pc,
                 }
             }
+            Instruction::Reti => {
+                let address = self.pop();
+                self.interrupts_enabled = true;
+                print_debug!(self, "RETI");
+                (address, 16)
+            }
             Instruction::Push(register) => {
                 let value = match register {
                     Register16Alt::BC => self.registers.bc(),

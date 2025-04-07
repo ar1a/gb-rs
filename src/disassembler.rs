@@ -193,12 +193,14 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                 }
                 1 => match p {
                     0 => (i, Instruction::Ret(JumpTest::Always)),
+                    1 => (i, Instruction::Reti),
+
                     2 => (i, Instruction::JP(JumpTest::Always, HLOrImmediate::HL)),
                     3 => (
                         i,
                         Instruction::Ld(LoadType::Word(Register16::SP, HLOrImmediate::HL)),
                     ),
-                    _ => nyi(),
+                    _ => unreachable!("{}", unreachable()),
                 },
                 _ => unreachable!("{}", unreachable()),
             },
