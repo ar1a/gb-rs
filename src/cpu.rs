@@ -634,6 +634,22 @@ impl Cpu {
                 print_debug!(self, "RRA");
                 (self.pc.wrapping_add(1), 4)
             }
+            Instruction::Rlca => {
+                debug_context!(self, "A = {:02X}", self.registers.a);
+                self.registers.a = self.rotate_left(self.registers.a, false);
+                debug_context!(self, insert at 1, "A' = {:02X}", self.registers.a);
+
+                print_debug!(self, "RLCA");
+                (self.pc.wrapping_add(1), 4)
+            }
+            Instruction::Rrca => {
+                debug_context!(self, "A = {:02X}", self.registers.a);
+                self.registers.a = self.rotate_right(self.registers.a, false);
+                debug_context!(self, insert at 1, "A' = {:02X}", self.registers.a);
+
+                print_debug!(self, "RRCA");
+                (self.pc.wrapping_add(1), 4)
+            }
             Instruction::Nop => {
                 print_debug!(self, "NOP");
                 (self.pc.wrapping_add(1), 4)
@@ -960,6 +976,26 @@ impl Cpu {
         debug_context!(self, "C = {carry}");
         self.set_flag(Flags::Carry, value & 1 == 1);
 
+        new_value
+    }
+
+    fn rotate_left(&mut self, value: u8, set_zero: bool) -> u8 {
+        let new_value = value.rotate_left(1);
+        self.set_flag(Flags::Carry, value >> 7 == 1);
+        self.set_flag(Flags::Zero, set_zero && new_value == 0);
+        self.registers
+            .f
+            .remove(make_bitflags!(Flags::{Subtraction | HalfCarry}));
+        new_value
+    }
+
+    fn rotate_right(&mut self, value: u8, set_zero: bool) -> u8 {
+        let new_value = value.rotate_right(1);
+        self.set_flag(Flags::Carry, value & 1 == 1);
+        self.set_flag(Flags::Zero, set_zero && new_value == 0);
+        self.registers
+            .f
+            .remove(make_bitflags!(Flags::{Subtraction | HalfCarry}));
         new_value
     }
 
