@@ -309,20 +309,19 @@ fn prefixed_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
     assert!(y < 8);
     assert!(z < 8);
 
-    let nyi = || todo!("prefixed instruction parse for X:{x} Z:{z} Y:{y}");
-    let _unreachable =
-        format!("impossible prefixed state! X:{x} Z:{z} Y:{y}\ndid you increment pc incorrectly?");
+    let unreachable = || {
+        format!("impossible prefixed state! X:{x} Z:{z} Y:{y}\ndid you increment pc incorrectly?")
+    };
 
+    let reg = Register::from_u8(z).unwrap();
     Ok(match x {
         0 => {
-            let reg = Register::from_u8(z).unwrap();
             let rot = Rot::from_u8(y).unwrap();
             (i, Instruction::Rot(rot, reg))
         }
-        1 => {
-            let reg = Register::from_u8(z).unwrap();
-            (i, Instruction::Bit(y, reg))
-        }
-        _ => nyi(),
+        1 => (i, Instruction::Bit(y, reg)),
+        2 => (i, Instruction::Res(y, reg)),
+        3 => (i, Instruction::Set(y, reg)),
+        _ => unreachable!("{}", unreachable()),
     })
 }

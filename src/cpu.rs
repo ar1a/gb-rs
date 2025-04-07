@@ -445,6 +445,36 @@ impl Cpu {
                     _ => (self.pc.wrapping_add(2), 8),
                 }
             }
+            Instruction::Res(bit, source) => {
+                let value = self.match_register(source);
+                let mask = 1 << bit;
+                debug_context!(self, "{source} = {value:02X}");
+
+                let new_value = value & !mask;
+                self.write_register(source, new_value);
+                debug_context!(self, "{source}' = {new_value:02X}");
+
+                print_debug!(self, "RES {bit}, {source}");
+                match source {
+                    Register::HLIndirect => (self.pc.wrapping_add(2), 12),
+                    _ => (self.pc.wrapping_add(2), 8),
+                }
+            }
+            Instruction::Set(bit, source) => {
+                let value = self.match_register(source);
+                let mask = 1 << bit;
+                debug_context!(self, "{source} = {value:02X}");
+
+                let new_value = value | mask;
+                self.write_register(source, new_value);
+                debug_context!(self, "{source}' = {new_value:02X}");
+
+                print_debug!(self, "SET {bit}, {source}");
+                match source {
+                    Register::HLIndirect => (self.pc.wrapping_add(2), 12),
+                    _ => (self.pc.wrapping_add(2), 8),
+                }
+            }
             Instruction::JR(condition, relative) => {
                 let should_jump = self.match_jump_condition(condition);
 

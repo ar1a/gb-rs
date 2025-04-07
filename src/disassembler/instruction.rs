@@ -33,6 +33,8 @@ pub enum Instruction {
     Cpl,
     Scf,
     Ccf,
+    Res(u8, Register),
+    Set(u8, Register),
 }
 
 #[derive(Debug, Clone, Copy)]
