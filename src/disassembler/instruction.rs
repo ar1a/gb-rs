@@ -29,6 +29,7 @@ pub enum Instruction {
     Nop,
     Daa,
     Reti,
+    Reset(u16),
 }
 
 #[derive(Debug, Clone, Copy)]

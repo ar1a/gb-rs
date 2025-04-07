@@ -535,6 +535,11 @@ impl Cpu {
                 print_debug!(self, "RETI");
                 (address, 16)
             }
+            Instruction::Reset(address) => {
+                self.push(self.pc.wrapping_add(1));
+                print_debug!(self, "RST {address:04X}");
+                (address, 16)
+            }
             Instruction::Push(register) => {
                 let value = match register {
                     Register16Alt::BC => self.registers.bc(),

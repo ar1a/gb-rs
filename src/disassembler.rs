@@ -285,7 +285,11 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
                     Instruction::Arithmetic(alu, RegisterOrImmediate::Immediate(value)),
                 )
             }
-            _ => nyi(),
+            7 => {
+                let address = u16::from(y) * 8;
+                (i, Instruction::Reset(address))
+            }
+            _ => unreachable!("{}", unreachable()),
         },
         _ => unreachable!("{}", unreachable()),
     })
