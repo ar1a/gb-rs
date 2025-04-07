@@ -797,6 +797,7 @@ impl Cpu {
                 (self.pc.wrapping_add(1), 4)
             }
             Instruction::Halt => {
+                #[allow(clippy::branches_sharing_code)] // until halt bug is implemented
                 if self.interrupts_enabled || !self.bus.is_interrupt_pending() {
                     self.halted = true;
                 } else {

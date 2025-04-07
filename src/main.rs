@@ -9,7 +9,7 @@ use std::{
 use clap::Parser;
 use jane_eyre::eyre::{self, eyre};
 use minifb::{Key, Window, WindowOptions};
-use tracing::{debug, trace, warn};
+use tracing::{debug, warn};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{

@@ -62,12 +62,6 @@ impl Timer {
         }
     }
 
-    /// Returns the clock speed in Hz
-    pub fn clock_speed(self) -> u32 {
-        const M_STATES_PER_SECOND: u32 = 0x10_0000; // DMG runs at 1,048,576 M-states per second
-        M_STATES_PER_SECOND / u32::from(self.cycle_speed())
-    }
-
     const fn increment_div(self, cycles: u8) -> (u8, u8) {
         // divider is incremented at a rate of 16,384Hz - every 256 T-states
         let (counter, overflow) = self.divider_counter.overflowing_add(cycles);
@@ -77,24 +71,5 @@ impl Timer {
             0
         };
         (divider, counter)
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    #[test]
-    fn test_clock_speed() {
-        let mut timer = Timer::default();
-        assert_eq!(timer.clock_speed(), 4096);
-
-        timer.control = 0b01;
-        assert_eq!(timer.clock_speed(), 262_144);
-
-        timer.control = 0b10;
-        assert_eq!(timer.clock_speed(), 65_536);
-
-        timer.control = 0b11;
-        assert_eq!(timer.clock_speed(), 16_384);
     }
 }
