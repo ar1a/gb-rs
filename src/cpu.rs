@@ -250,6 +250,9 @@ impl Cpu {
                         RegisterOrImmediate::Register(Register::HLIndirect) => {
                             (self.pc.wrapping_add(1), 8)
                         }
+                        RegisterOrImmediate::Register(_) if register == Register::HLIndirect => {
+                            (self.pc.wrapping_add(1), 8)
+                        }
                         RegisterOrImmediate::Register(_) => (self.pc.wrapping_add(1), 4),
                     }
                 }
