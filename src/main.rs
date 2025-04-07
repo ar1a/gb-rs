@@ -9,7 +9,7 @@ use std::{
 use clap::Parser;
 use jane_eyre::eyre::{self, eyre};
 use minifb::{Key, Window, WindowOptions};
-use tracing::{debug, warn};
+use tracing::{debug, trace, warn};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{
@@ -104,10 +104,11 @@ fn main() -> eyre::Result<()> {
             // do 60 bursts of cycles per second
             let mut cycles_elapsed = 0;
             while cycles_elapsed < target_cycles {
+                let was_halted = cpu.halted;
                 let cycles = cpu.step();
                 cycles_elapsed += u32::from(cycles);
 
-                if args.log && cycles > 0 {
+                if args.log && cycles > 0 && cpu.pc != 0x50 && !(was_halted && cpu.halted) {
                     f.as_mut()
                         .unwrap()
                         .write_all(&cpu.format_state().into_bytes())

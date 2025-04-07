@@ -224,7 +224,7 @@ impl MemoryBus {
         ]
     }
 
-    pub fn is_interrupt_dispatch_needed(&self) -> bool {
+    pub fn is_interrupt_pending(&self) -> bool {
         self.interrupt_enabled.intersects(self.interrupt_flag)
     }
 

@@ -29,6 +29,7 @@ pub struct Cpu {
     pub bus: MemoryBus,
     pub interrupts_enabled: bool,
     interrupts_enabled_next: bool,
+    pub halted: bool,
 
     debug_bytes_consumed: Vec<u8>,
     // Optionally used
@@ -70,6 +71,7 @@ impl Cpu {
                 bus: MemoryBus::new(boot_rom, game_rom, test_mode),
                 interrupts_enabled: false,
                 interrupts_enabled_next: false,
+                halted: false,
                 debug_bytes_consumed: Vec::default(),
                 debug_context: Vec::default(),
             },
@@ -89,6 +91,7 @@ impl Cpu {
                 bus: MemoryBus::new(boot_rom, game_rom, test_mode),
                 interrupts_enabled: false,
                 interrupts_enabled_next: false,
+                halted: false,
                 debug_bytes_consumed: Vec::default(),
                 debug_context: Vec::default(),
             },
@@ -98,32 +101,35 @@ impl Cpu {
     pub fn step(&mut self) -> u8 {
         self.debug_context.clear();
 
-        let (next_pc, cycles) =
-            if self.interrupts_enabled && self.bus.is_interrupt_dispatch_needed() {
-                self.push(self.pc);
-                self.interrupts_enabled = false;
-                trace!("interrupt triggered: {:?}", self.bus.get_first_interrupt());
-                (self.bus.pop_interrupt_handler_address(), 20)
-            } else {
-                let slice = self.bus.slice_from(self.pc);
-                let (after, instruction) = parse_instruction(&slice).unwrap();
-                let bytes_consumed_len = slice.len() - after.len();
-                self.debug_bytes_consumed
-                    .splice(.., slice[..bytes_consumed_len].iter().copied());
+        let (next_pc, cycles) = if self.interrupts_enabled && self.bus.is_interrupt_pending() {
+            self.push(self.pc);
+            self.interrupts_enabled = false;
+            self.halted = false;
+            trace!("interrupt triggered: {:?}", self.bus.get_first_interrupt());
+            (self.bus.pop_interrupt_handler_address(), 20)
+        } else if !self.halted || self.bus.is_interrupt_pending() {
+            self.halted = false; // disable HALT if an interrupt caused cpu to resume execution
+            let slice = self.bus.slice_from(self.pc);
+            let (after, instruction) = parse_instruction(&slice).unwrap();
+            let bytes_consumed_len = slice.len() - after.len();
+            self.debug_bytes_consumed
+                .splice(.., slice[..bytes_consumed_len].iter().copied());
 
-                let res = self.execute(instruction);
+            let res = self.execute(instruction);
 
-                // FIXME: EI should be handled even if we're dispatching an interrupt, i think...
-                if self.interrupts_enabled_next {
-                    self.interrupts_enabled_next = false;
-                    self.interrupts_enabled = true;
-                }
-                if matches!(instruction, Instruction::Ei) {
-                    self.interrupts_enabled_next = true;
-                }
+            // FIXME: EI should be handled even if we're dispatching an interrupt, i think...
+            if self.interrupts_enabled_next {
+                self.interrupts_enabled_next = false;
+                self.interrupts_enabled = true;
+            }
+            if matches!(instruction, Instruction::Ei) {
+                self.interrupts_enabled_next = true;
+            }
 
-                res
-            };
+            res
+        } else {
+            (self.pc, 4)
+        };
 
         self.bus.gpu.step(cycles);
         if self.bus.timer.step(cycles) {
@@ -788,6 +794,20 @@ impl Cpu {
                 self.set_flag(Flags::HalfCarry, false);
                 self.set_flag(Flags::Carry, !self.registers.f.contains(Flags::Carry));
                 print_debug!(self, "CCF");
+                (self.pc.wrapping_add(1), 4)
+            }
+            Instruction::Halt => {
+                if self.interrupts_enabled || !self.bus.is_interrupt_pending() {
+                    self.halted = true;
+                } else {
+                    // FIXME: halt bug - cpu continues execution after the HALT, but the byte after
+                    // it is read twice in a row
+                    self.halted = true;
+                }
+
+                debug_context!(self, "IME = {}", u8::from(self.interrupts_enabled));
+                print_debug!(self, "HALT");
+
                 (self.pc.wrapping_add(1), 4)
             }
             _ => todo!("unimplemented instruction: {:?}", instruction),

@@ -132,7 +132,7 @@ pub fn parse_instruction(i: &[u8]) -> IResult<&[u8], Instruction> {
             _ => unreachable!("{}", unreachable()),
         },
         1 => match z {
-            6 if y == 6 => nyi(),
+            6 if y == 6 => (i, Instruction::Halt),
             0..8 => {
                 let target = Register::from_u8(y).unwrap();
                 let source = Register::from_u8(z).unwrap();

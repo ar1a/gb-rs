@@ -35,6 +35,7 @@ pub enum Instruction {
     Ccf,
     Res(u8, Register),
     Set(u8, Register),
+    Halt,
 }
 
 #[derive(Debug, Clone, Copy)]
