@@ -30,6 +30,9 @@ pub enum Instruction {
     Daa,
     Reti,
     Reset(u16),
+    Cpl,
+    Scf,
+    Ccf,
 }
 
 #[derive(Debug, Clone, Copy)]

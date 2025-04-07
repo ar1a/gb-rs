@@ -78,8 +78,7 @@ fn main() -> eyre::Result<()> {
         } else {
             None
         };
-        let test_rom =
-            include_bytes!("../test_roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb");
+        let test_rom = include_bytes!("../test_roms/cpu_instrs/individual/09-op r,r.gb");
         let mut cpu = Cpu::new(boot_rom, test_rom, args.log);
         let mut f = if args.log {
             Some(BufWriter::new(File::create("log.txt").unwrap()))

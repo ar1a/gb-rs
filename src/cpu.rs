@@ -656,6 +656,27 @@ impl Cpu {
                 print_debug!(self, "DAA");
                 (self.pc.wrapping_add(1), 4)
             }
+            Instruction::Cpl => {
+                debug_context!(self, "A = {}", self.registers.a);
+                self.registers.a = self.cpl();
+                debug_context!(self, insert at 1, "A' = {}", self.registers.a);
+                print_debug!(self, "CPL");
+                (self.pc.wrapping_add(1), 4)
+            }
+            Instruction::Scf => {
+                self.set_flag(Flags::Subtraction, false);
+                self.set_flag(Flags::HalfCarry, false);
+                self.set_flag(Flags::Carry, true);
+                print_debug!(self, "SCF");
+                (self.pc.wrapping_add(1), 4)
+            }
+            Instruction::Ccf => {
+                self.set_flag(Flags::Subtraction, false);
+                self.set_flag(Flags::HalfCarry, false);
+                self.set_flag(Flags::Carry, !self.registers.f.contains(Flags::Carry));
+                print_debug!(self, "CCF");
+                (self.pc.wrapping_add(1), 4)
+            }
             _ => todo!("unimplemented instruction: {:?}", instruction),
         }
     }
@@ -997,6 +1018,12 @@ impl Cpu {
         self.registers.f.remove(Flags::HalfCarry);
 
         new_value
+    }
+
+    fn cpl(&mut self) -> u8 {
+        self.set_flag(Flags::Subtraction, true);
+        self.set_flag(Flags::HalfCarry, true);
+        !self.registers.a
     }
 
     fn set_flag(&mut self, flag: Flags, cond: bool) {
