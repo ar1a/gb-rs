@@ -196,6 +196,9 @@ impl Gpu {
     }
 
     pub const fn read_oam(&self, address: usize) -> u8 {
+        if !matches!(self.mode, Mode::HBlank | Mode::VBlank) {
+            return 0xFF;
+        }
         self.oam[address]
     }
 
