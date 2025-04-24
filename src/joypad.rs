@@ -22,6 +22,7 @@ impl Joypad {
         self.register |= value & mask;
     }
 
+    // TODO: Switch to <https://docs.rs/bilge/latest/bilge/>?
     pub fn read_joypad(&self) -> u8 {
         let upper = self.register & 0b1111_0000;
         let lower = match (self.register >> 4) & 0b11 {
