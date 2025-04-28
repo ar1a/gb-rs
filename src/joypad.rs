@@ -19,12 +19,13 @@ pub struct UpperNibble {
 
 #[bitsize(2)]
 #[derive(Debug, Clone, Copy, FromBits, Default)]
+// Variants are selected by setting the bit to 0
 pub enum NibbleSelect {
     Button = 0b01,
     Dpad = 0b10,
-    #[fallback]
+    Both = 0b00,
     #[default]
-    Reserved,
+    None = 0b11,
 }
 
 #[bitsize(4)]
@@ -51,22 +52,15 @@ impl Joypad {
         self.input_select = UpperNibble::from(u4::extract_u8(value, 4));
     }
 
-    // FIXME: Implement proper reading for if both buttons/dpad is selected
-    // "The good news is you can actually select both buttons and directions by setting both
-    // selection bits low. The resulting bits will be low if either the corresponding direction or
-    // button is pressed."
-    // <https://www.reddit.com/r/EmuDev/comments/zq6ygz/comment/j0yo0uh/>
     pub fn read_joypad(self) -> u8 {
-        let upper: u8 = u4::from(self.input_select).into();
+        let upper = self.input_select.value.as_u8();
         let lower = match self.input_select.select() {
             NibbleSelect::Button => self.button_nibble(),
             NibbleSelect::Dpad => self.dpad_nibble(),
-            NibbleSelect::Reserved => {
-                todo!(
-                    "handle incorrect joypad selection bits: {:04b}",
-                    self.input_select.value
-                );
-            }
+            // If both are selected, bits are set to 0 if *either* of the buttons assigned to that
+            // bit are pressed
+            NibbleSelect::Both => self.button_nibble() & self.dpad_nibble(),
+            NibbleSelect::None => 0xF,
         };
         upper << 4 | lower
     }
