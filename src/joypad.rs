@@ -67,10 +67,12 @@ impl Joypad {
 
     fn button_nibble(self) -> u8 {
         // invert the bits because a button being pressed is seen as that bit being 0
-        u8::from(!self.buttons.value)
+        // flip them before converting to a u8 so the upper nibble isn't touched
+        (!self.buttons.value).as_u8()
     }
     fn dpad_nibble(self) -> u8 {
         // invert the bits because a button being pressed is seen as that bit being 0
-        u8::from(!self.dpad.value)
+        // flip them before converting to a u8 so the upper nibble isn't touched
+        (!self.dpad.value).as_u8()
     }
 }
