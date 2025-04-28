@@ -187,6 +187,10 @@ impl MemoryBus {
                     self.gpu.line
                 }
             }
+            0xFF4D => {
+                warn!("read from CGB only register: KEY1");
+                0
+            }
             0xFFFF => self.interrupt_enabled.bits(),
             _ => todo!("implement io register read {address:04X}"),
         }
@@ -214,6 +218,9 @@ impl MemoryBus {
             0xFF42 => self.gpu.scroll_y = value,
             0xFF43 => self.gpu.scroll_x = value,
             0xFF47 => self.gpu.background_colours = BitArray::new([value]),
+            0xFF4D => {
+                warn!("write to CGB only register: KEY1");
+            }
             0xFF50 => self.boot_rom = None,
             0xFFFF => self.interrupt_enabled = BitFlags::from_bits(value).unwrap(),
             _ => todo!("implement io register write {address:04X}"),
