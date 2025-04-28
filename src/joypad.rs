@@ -1,13 +1,26 @@
+use bilge::prelude::*;
+
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Joypad {
     pub register: u8,
 
+    pub buttons: Buttons,
+    pub dpad: Dpad,
+}
+
+#[bitsize(4)]
+#[derive(DebugBits, Clone, Copy, Default)]
+pub struct Buttons {
     pub start: bool,
     pub select: bool,
     pub b: bool,
     pub a: bool,
+}
 
+#[bitsize(4)]
+#[derive(DebugBits, Clone, Copy, Default)]
+pub struct Dpad {
     pub down: bool,
     pub up: bool,
     pub left: bool,
@@ -23,7 +36,7 @@ impl Joypad {
     }
 
     // TODO: Switch to <https://docs.rs/bilge/latest/bilge/>?
-    pub fn read_joypad(&self) -> u8 {
+    pub fn read_joypad(self) -> u8 {
         let upper = self.register & 0b1111_0000;
         let lower = match (self.register >> 4) & 0b11 {
             0b01 => self.button_nibble(),
@@ -35,20 +48,12 @@ impl Joypad {
         upper | lower
     }
 
-    const fn button_nibble(&self) -> u8 {
-        let start = (self.start as u8) << 3;
-        let select = (self.select as u8) << 2;
-        let b = (self.b as u8) << 1;
-        let a = self.a as u8;
-
-        start | select | b | a
+    fn button_nibble(self) -> u8 {
+        // invert the bits because a button being pressed is seen as that bit being 0
+        u8::from(!self.buttons.value)
     }
-    const fn dpad_nibble(&self) -> u8 {
-        let down = (self.down as u8) << 3;
-        let up = (self.up as u8) << 2;
-        let left = (self.left as u8) << 1;
-        let right = self.right as u8;
-
-        down | up | left | right
+    fn dpad_nibble(self) -> u8 {
+        // invert the bits because a button being pressed is seen as that bit being 0
+        u8::from(!self.dpad.value)
     }
 }
