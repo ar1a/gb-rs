@@ -206,7 +206,7 @@ impl Gpu {
         self.oam[address] = value;
     }
 
-    #[allow(clippy::cast_possible_truncation, clippy::similar_names)]
+    #[allow(clippy::similar_names)]
     fn render_line(&mut self) {
         let lookup_colour = |pixel: ColourIndex| -> (u8, u8, u8) {
             let bit = pixel as usize * 2;

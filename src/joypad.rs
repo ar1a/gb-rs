@@ -1,6 +1,5 @@
 use bilge::prelude::*;
 
-#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Joypad {
     pub input_select: UpperNibble,

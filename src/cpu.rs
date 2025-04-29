@@ -189,7 +189,6 @@ impl Cpu {
     #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
     fn execute(&mut self, instruction: Instruction) -> (u16, u8) {
         #![allow(unreachable_patterns)]
-        #![allow(clippy::infallible_destructuring_match)]
         match instruction {
             Instruction::Ld(load_type) => match load_type {
                 LoadType::Indirect(indirect_type, direction) => {
